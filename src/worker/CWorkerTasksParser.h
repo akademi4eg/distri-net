@@ -6,7 +6,7 @@
 class CWorkerTasksParser {
 	SimplePocoHandler *pConnectionHandler;
 	AMQP::Connection *pConnection;
-	AMQP::Channel *pInputChannel;
+	AMQP::Channel *pChannel;
 public:
 	CWorkerTasksParser(const std::string& host, uint16_t port,
 			const AMQP::Login& login, const std::string& vhost);

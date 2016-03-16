@@ -3,14 +3,15 @@
 #define Log(x) (std::cout << x << std::endl)
 
 CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
-		const AMQP::Login& login, const std::string& vhost) {
+		const AMQP::Login& login, const std::string& vhost)
+{
 	Log("Setting up connection to Rabbit.");
 	pConnectionHandler = new SimplePocoHandler(host, port);
 	pConnection = new AMQP::Connection(pConnectionHandler, login, vhost);
-	pInputChannel = new AMQP::Channel(pConnection);
-	pInputChannel->setQos(1);
+	pChannel = new AMQP::Channel(pConnection);
+	pChannel->setQos(1);
 
-	pInputChannel->consume("batches_tasks").onReceived([&](const AMQP::Message &message,
+	pChannel->consume("batches_tasks").onReceived([&](const AMQP::Message &message,
             uint64_t deliveryTag,
             bool redelivered)
     {
@@ -22,16 +23,17 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
 		{
             AMQP::Envelope env(response->toString());
             env.setCorrelationID(message.correlationID());
-            pInputChannel->publish("", message.replyTo(), env);
+            pChannel->publish("", message.replyTo(), env);
 		}
-        pInputChannel->ack(deliveryTag);
+        pChannel->ack(deliveryTag);
     });
 
     Log("Worker is ready.");
 }
 
-CWorkerTasksParser::~CWorkerTasksParser() {
-	delete pInputChannel;
+CWorkerTasksParser::~CWorkerTasksParser()
+{
+	delete pChannel;
 	delete pConnection;
 	delete pConnectionHandler;
 }
