@@ -2,8 +2,8 @@
 #include <chrono>
 #include <thread>
 
+#include "../SimplePocoHandler.h"
 #define Log(x) (std::cout << x << std::endl)
-#include "SimplePocoHandler.h"
 
 int main(int argc, const char* argv[])
 {

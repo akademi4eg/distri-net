@@ -16,11 +16,14 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
     {
         const auto body = message.message();
         Log("Get message: " + body);
-
-        AMQP::Envelope env("reply:"+parseRequest(body)->toString());
-        env.setCorrelationID(message.correlationID());
-
-        pInputChannel->publish("", message.replyTo(), env);
+        std::unique_ptr<IRequest> request = parseRequest(body);
+        std::unique_ptr<IResponse> response = processRequest(request);
+        if (request->isResponseRequired())
+		{
+            AMQP::Envelope env(response->toString());
+            env.setCorrelationID(message.correlationID());
+            pInputChannel->publish("", message.replyTo(), env);
+		}
         pInputChannel->ack(deliveryTag);
     });
 
@@ -52,4 +55,20 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 	}
 
 	return std::unique_ptr<IRequest>(new CUnsupportedRequest());
+}
+
+std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IRequest>  const & request)
+{
+	switch (request->getType())
+	{
+	case IRequest::Type::EXIT:
+		pConnectionHandler->quit();
+		return std::unique_ptr<IResponse>(new CSuccessResponse());
+		break;
+	case IRequest::Type::VERSION:
+		return std::unique_ptr<IResponse>(new CVersionResponse());
+		break;
+	default:
+		return std::unique_ptr<IResponse>(new CErrorResponse("Unsupported request."));
+	}
 }

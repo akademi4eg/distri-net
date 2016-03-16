@@ -14,4 +14,5 @@ public:
 
 	void run();
 	std::unique_ptr<IRequest> parseRequest(const std::string& msg) const;
+	std::unique_ptr<IResponse> processRequest(std::unique_ptr<IRequest> const & request);
 };
