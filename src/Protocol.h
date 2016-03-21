@@ -1,6 +1,8 @@
 #include "Version.h"
+#include "IDataReader.h"
 
 const std::string c_sWorker = "worker:";
+const std::string c_sUnaryOp = "UNARY_OP";
 const std::string c_sVersion = "VERSION";
 const std::string c_sExit = "EXIT";
 const std::string c_sUnsup = "UNSUPPORTED";
@@ -9,12 +11,23 @@ const std::string c_sSuccess = "OK";
 class IRequest
 {
 public:
-	enum class Type {VERSION, EXIT, UNSUPPORTED};
+	enum class Type {UNARY_OP, VERSION, EXIT, UNSUPPORTED};
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
 
 	virtual bool isResponseRequired() const {return false;};
 	virtual ~IRequest(){};
+};
+
+class CUnaryOpRequest : public IRequest
+{
+	SDataKey key;
+public:
+	CUnaryOpRequest(const SDataKey& akey) : key(akey) {};
+	Type getType() const {return Type::UNARY_OP;};
+	std::string toString() const {return c_sUnaryOp + "\n" + key.toString();};
+	bool isResponseRequired() const {return true;};
+	SDataKey getKey() {return key;};
 };
 
 class CVersionRequest : public IRequest

@@ -1,4 +1,6 @@
 #include "CWorkerTasksParser.h"
+#include <string>
+#include <sstream>
 
 #define Log(x) (std::cout << x << std::endl)
 
@@ -47,11 +49,20 @@ void CWorkerTasksParser::run()
 
 std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& msg) const
 {
-	if (msg == c_sVersion)
+	std::istringstream msgStream(msg);
+	std::string line;
+	msgStream >> line;
+	if (line == c_sUnaryOp)
+	{
+		SDataKey key;
+		msgStream >> key.sSource >> key.iIndex >> key.iEntrySize;
+		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key));
+	}
+	else if (line == c_sVersion)
 	{
 		return std::unique_ptr<IRequest>(new CVersionRequest());
 	}
-	else if (msg == c_sExit)
+	else if (line == c_sExit)
 	{
 		return std::unique_ptr<IRequest>(new CExitRequest());
 	}
@@ -63,14 +74,26 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 {
 	switch (request->getType())
 	{
+	case IRequest::Type::UNARY_OP:
+		if (applyUnaryOp(reinterpret_cast<CUnaryOpRequest*>(request.get())->getKey()))
+			return std::unique_ptr<IResponse>(new CSuccessResponse());
+		else
+			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
 	case IRequest::Type::EXIT:
 		pConnectionHandler->quit();
 		return std::unique_ptr<IResponse>(new CSuccessResponse());
-		break;
 	case IRequest::Type::VERSION:
 		return std::unique_ptr<IResponse>(new CVersionResponse());
-		break;
 	default:
 		return std::unique_ptr<IResponse>(new CErrorResponse("Unsupported request."));
 	}
+}
+
+bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key)
+{
+	std::unique_ptr<DataEntry> data = fileReader.loadData(key);
+	if (!data)
+		return false;
+	std::for_each(data->begin(), data->end(), [](double& val){val++;});
+	return fileReader.saveData(key, *data);
 }
