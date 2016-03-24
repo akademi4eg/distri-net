@@ -1,5 +1,6 @@
 #include "Version.h"
 #include "IDataReader.h"
+#include "Operations.h"
 
 const std::string c_sWorker = "worker:";
 const std::string c_sUnaryOp = "UNARY_OP";
@@ -22,12 +23,18 @@ public:
 class CUnaryOpRequest : public IRequest
 {
 	SDataKey key;
+	Operations::Type op;
 public:
-	CUnaryOpRequest(const SDataKey& akey) : key(akey) {};
+	CUnaryOpRequest(const SDataKey& akey, Operations::Type aop)
+		: key(akey), op(aop) {};
 	Type getType() const {return Type::UNARY_OP;};
-	std::string toString() const {return c_sUnaryOp + "\n" + key.toString();};
+	std::string toString() const
+	{
+		return c_sUnaryOp + "\n" + key.toString() + "\n" + std::to_string(op);
+	};
 	bool isResponseRequired() const {return true;};
 	SDataKey getKey() {return key;};
+	Operations::Type getOp() const {return op;};
 };
 
 class CVersionRequest : public IRequest

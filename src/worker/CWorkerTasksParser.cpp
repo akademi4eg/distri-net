@@ -1,3 +1,4 @@
+#include "../Operations.h"
 #include "CWorkerTasksParser.h"
 #include <string>
 #include <sstream>
@@ -55,8 +56,9 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 	if (line == c_sUnaryOp)
 	{
 		SDataKey key;
-		msgStream >> key.sSource >> key.iIndex >> key.iEntrySize;
-		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key));
+		int op;
+		msgStream >> key.sSource >> key.iIndex >> key.iEntrySize >> op;
+		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key, (Operations::Type)op));
 	}
 	else if (line == c_sVersion)
 	{
@@ -75,10 +77,13 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 	switch (request->getType())
 	{
 	case IRequest::Type::UNARY_OP:
-		if (applyUnaryOp(reinterpret_cast<CUnaryOpRequest*>(request.get())->getKey()))
+	{
+		CUnaryOpRequest *unaryOp = reinterpret_cast<CUnaryOpRequest*>(request.get());
+		if (applyUnaryOp(unaryOp->getKey(), unaryOp->getOp()))
 			return std::unique_ptr<IResponse>(new CSuccessResponse());
 		else
 			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
+	}
 	case IRequest::Type::EXIT:
 		pConnectionHandler->quit();
 		return std::unique_ptr<IResponse>(new CSuccessResponse());
@@ -89,11 +94,22 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 	}
 }
 
-bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key)
+bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::Type op)
 {
 	std::unique_ptr<DataEntry> data = fileReader.loadData(key);
 	if (!data)
 		return false;
-	std::for_each(data->begin(), data->end(), [](double& val){val++;});
+	switch (op)
+	{
+	case Operations::Type::INCREMENT:
+		std::for_each(data->begin(), data->end(), Operations::increment);
+		break;
+	case Operations::Type::DECREMENT:
+		std::for_each(data->begin(), data->end(), Operations::decrement);
+		break;
+	case Operations::Type::FLIP_SIGN:
+		std::for_each(data->begin(), data->end(), Operations::flipSign);
+		break;
+	}
 	return fileReader.saveData(key, *data);
 }
