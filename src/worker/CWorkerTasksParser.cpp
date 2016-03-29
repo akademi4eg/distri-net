@@ -19,8 +19,9 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             bool redelivered)
     {
         const auto body = message.message();
-        Log("Get message: " + body);
+        Log("Got message! Parsing...");
         std::unique_ptr<IRequest> request = parseRequest(body);
+        Log("Parsed message: " + request->toPrettyString());
         std::unique_ptr<IResponse> response = processRequest(request);
         if (request->isResponseRequired())
 		{
@@ -110,6 +111,8 @@ bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::Type op)
 	case Operations::Type::FLIP_SIGN:
 		std::for_each(data->begin(), data->end(), Operations::flipSign);
 		break;
+	default:
+		return false;
 	}
 	return fileReader.saveData(key, *data);
 }

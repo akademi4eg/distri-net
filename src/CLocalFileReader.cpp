@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fstream>
 #include "CLocalFileReader.h"
 
@@ -7,11 +8,15 @@ std::unique_ptr<DataEntry> CLocalFileReader::loadData(const SDataKey& key)
 {
 	std::ifstream input(key.getFilename().c_str(), std::ios::in | std::ios::binary);
 	if (!input)
+	{
+		Log("Failed to create input stream!");
 		return std::unique_ptr<DataEntry>(nullptr);
+	}
 	DataEntry *result = new DataEntry(key.iEntrySize);
 	input.read(reinterpret_cast<char*>(&(*result)[0]), key.iEntrySize*sizeof(DataEntry::value_type));
 	if (!input)
 	{
+		Log("Failed to read from stream!");
 		delete result;
 		result = nullptr;
 	}
@@ -23,10 +28,14 @@ bool CLocalFileReader::saveData(const SDataKey& key, const DataEntry& data)
 {
 	std::ofstream output(key.getFilename().c_str(), std::ios::out | std::ios::binary);
 	if (!output)
+	{
+		Log("Failed to create output stream!");
 		return false;
+	}
 	output.write(reinterpret_cast<const char*>(&data[0]), data.size()*sizeof(DataEntry::value_type));
 	if (!output)
 	{
+		Log("Failed to write to stream!");
 		output.close();
 		return false;
 	}

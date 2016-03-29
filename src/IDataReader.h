@@ -10,6 +10,9 @@ struct SDataKey
 	std::string toString() const {
 		return sSource + "\n" + std::to_string(iIndex) + "\n" + std::to_string(iEntrySize);
 	};
+	std::string toPrettyString() const {
+		return sSource + "[index = " + std::to_string(iIndex) + ", size = " + std::to_string(iEntrySize) + "]";
+	};
 	std::string getFilename() const {return sSource + ":" + std::to_string(iIndex);}
 
 	std::string sSource;

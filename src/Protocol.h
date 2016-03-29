@@ -2,6 +2,7 @@
 #include "IDataReader.h"
 #include "Operations.h"
 
+static const char *c_UnaryOps[] = {"INCREMENT", "DECREMENT", "FLIP_SIGN"};
 const std::string c_sWorker = "worker:";
 const std::string c_sUnaryOp = "UNARY_OP";
 const std::string c_sVersion = "VERSION";
@@ -15,6 +16,7 @@ public:
 	enum class Type {UNARY_OP, VERSION, EXIT, UNSUPPORTED};
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
+	virtual std::string toPrettyString() const {return toString();};
 
 	virtual bool isResponseRequired() const {return false;};
 	virtual ~IRequest(){};
@@ -31,6 +33,11 @@ public:
 	std::string toString() const
 	{
 		return c_sUnaryOp + "\n" + key.toString() + "\n" + std::to_string(op);
+	};
+	std::string toPrettyString() const
+	{
+		std::string opStr((op<Operations::Type::UNSUPPORTED)?c_UnaryOps[op]:"UNSUPPORTED");
+		return opStr + " for key " + key.toPrettyString();
 	};
 	bool isResponseRequired() const {return true;};
 	SDataKey getKey() {return key;};

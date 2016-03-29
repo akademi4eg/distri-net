@@ -3,17 +3,17 @@
 namespace Operations
 {
 
-double increment(double val)
+void increment(double& val)
 {
-	return val++;
+	val++;
 }
-double decrement(double val)
+void decrement(double& val)
 {
-	return val--;
+	val--;
 }
-double flipSign(double val)
+void flipSign(double& val)
 {
-	return -val;
+	val = -val;
 }
 
 }

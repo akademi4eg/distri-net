@@ -4,10 +4,10 @@ namespace Operations
 {
 enum Type
 {
-	INCREMENT, DECREMENT, FLIP_SIGN
+	INCREMENT, DECREMENT, FLIP_SIGN, UNSUPPORTED
 };
 
-double increment(double val);
-double decrement(double val);
-double flipSign(double val);
+void increment(double& val);
+void decrement(double& val);
+void flipSign(double& val);
 }
