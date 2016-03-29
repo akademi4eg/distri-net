@@ -18,5 +18,6 @@ public:
 	std::unique_ptr<IRequest> parseRequest(const std::string& msg) const;
 	std::unique_ptr<IResponse> processRequest(std::unique_ptr<IRequest> const & request);
 
-	bool applyUnaryOp(const SDataKey& key, Operations::Type op);
+	bool applyUnaryOp(const SDataKey& key, Operations::UnaryType op);
+	bool applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther, Operations::BinaryType op);
 };

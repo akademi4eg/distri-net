@@ -2,12 +2,18 @@
 
 namespace Operations
 {
-enum Type
+enum UnaryType
 {
-	INCREMENT, DECREMENT, FLIP_SIGN, UNSUPPORTED
+	ZEROS, INCREMENT, DECREMENT, FLIP_SIGN, UNARY_UNSUPPORTED
+};
+enum BinaryType
+{
+	ADD, BINARY_UNSUPPORTED
 };
 
 void increment(double& val);
 void decrement(double& val);
 void flipSign(double& val);
+
+void add(double& base, double& other);
 }

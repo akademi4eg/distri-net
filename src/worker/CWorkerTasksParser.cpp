@@ -19,7 +19,7 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             bool redelivered)
     {
         const auto body = message.message();
-        Log("Got message! Parsing...");
+        Log("Got message [" + message.correlationID() + "]! Parsing...");
         std::unique_ptr<IRequest> request = parseRequest(body);
         Log("Parsed message: " + request->toPrettyString());
         std::unique_ptr<IResponse> response = processRequest(request);
@@ -28,6 +28,7 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             AMQP::Envelope env(response->toString());
             env.setCorrelationID(message.correlationID());
             pChannel->publish("", message.replyTo(), env);
+            Log("Sent response [" + env.correlationID() + "]: " + response->toString());
 		}
         pChannel->ack(deliveryTag);
     });
@@ -59,7 +60,16 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 		SDataKey key;
 		int op;
 		msgStream >> key.sSource >> key.iIndex >> key.iEntrySize >> op;
-		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key, (Operations::Type)op));
+		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key, (Operations::UnaryType)op));
+	}
+	else if (line == c_sBinaryOp)
+	{
+		SDataKey keyBase;
+		SDataKey keyOther;
+		int op;
+		msgStream >> keyBase.sSource >> keyBase.iIndex >> keyBase.iEntrySize;
+		msgStream >> keyOther.sSource >> keyOther.iIndex >> keyOther.iEntrySize >> op;
+		return std::unique_ptr<IRequest>(new CBinaryOpRequest(keyBase, keyOther, (Operations::BinaryType)op));
 	}
 	else if (line == c_sVersion)
 	{
@@ -85,6 +95,14 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 		else
 			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
 	}
+	case IRequest::Type::BINARY_OP:
+	{
+		CBinaryOpRequest *binaryOp = reinterpret_cast<CBinaryOpRequest*>(request.get());
+		if (applyBinaryOp(binaryOp->getBaseKey(), binaryOp->getOtherKey(), binaryOp->getOp()))
+			return std::unique_ptr<IResponse>(new CSuccessResponse());
+		else
+			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
+	}
 	case IRequest::Type::EXIT:
 		pConnectionHandler->quit();
 		return std::unique_ptr<IResponse>(new CSuccessResponse());
@@ -95,24 +113,58 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 	}
 }
 
-bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::Type op)
+bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType op)
 {
-	std::unique_ptr<DataEntry> data = fileReader.loadData(key);
-	if (!data)
-		return false;
+	std::unique_ptr<DataEntry> data;
+	if (op != Operations::UnaryType::ZEROS)
+	{
+		data = fileReader.loadData(key);
+		if (!data)
+			return false;
+	}
 	switch (op)
 	{
-	case Operations::Type::INCREMENT:
+	case Operations::UnaryType::ZEROS:
+		data = std::unique_ptr<DataEntry>(new DataEntry(key.iEntrySize, 0.0));
+		break;
+	case Operations::UnaryType::INCREMENT:
 		std::for_each(data->begin(), data->end(), Operations::increment);
 		break;
-	case Operations::Type::DECREMENT:
+	case Operations::UnaryType::DECREMENT:
 		std::for_each(data->begin(), data->end(), Operations::decrement);
 		break;
-	case Operations::Type::FLIP_SIGN:
+	case Operations::UnaryType::FLIP_SIGN:
 		std::for_each(data->begin(), data->end(), Operations::flipSign);
 		break;
 	default:
 		return false;
 	}
 	return fileReader.saveData(key, *data);
+}
+
+bool CWorkerTasksParser::applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther, Operations::BinaryType op)
+{
+	if (keyBase.iEntrySize != keyOther.iEntrySize)
+		return false;
+	std::unique_ptr<DataEntry> dataBase = fileReader.loadData(keyBase);
+	if (!dataBase)
+		return false;
+	std::unique_ptr<DataEntry> dataOther = fileReader.loadData(keyOther);
+	if (!dataOther)
+		return false;
+	switch (op)
+	{
+	case Operations::BinaryType::ADD:
+	{
+		DataEntry::iterator other = dataOther->begin();
+		for (DataEntry::iterator base = dataBase->begin(); base != dataBase->end(); ++base, ++other)
+		{
+			Operations::add(*base, *other);
+		}
+		break;
+	}
+	default:
+		return false;
+	}
+	return fileReader.saveData(keyBase, *dataBase);
 }

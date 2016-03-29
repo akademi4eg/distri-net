@@ -24,7 +24,7 @@ CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 			uint64_t deliveryTag,
 			bool redelivered)
 	{
-		Log("Got response: " + message.message());
+		Log("Got response [" + message.correlationID() + "]: " + message.message());
 		pChannel->ack(deliveryTag);
 	};
 
@@ -52,5 +52,5 @@ void CTasksCreator::sendRequest(std::unique_ptr<IRequest> const & request)
 	env.setCorrelationID(std::to_string(std::rand()));
 	env.setReplyTo(sResponsesQueue);
 	pChannel->publish(sBatchExc, sTaskRoutKey, env);
-	Log("Sent " + request->toString() + " request.");
+	Log("Sent message [" + env.correlationID() + "]: " + request->toPrettyString());
 }
