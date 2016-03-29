@@ -5,6 +5,7 @@
 static const char *c_UnaryOps[] = {"ZEROS", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
 static const char *c_BinaryOps[] = {"ADD"};
 const std::string c_sWorker = "worker:";
+const std::string c_sCallback = "CALLBACK";
 const std::string c_sUnaryOp = "UNARY_OP";
 const std::string c_sBinaryOp = "BINARY_OP";
 const std::string c_sVersion = "VERSION";
@@ -15,13 +16,32 @@ const std::string c_sSuccess = "OK";
 class IRequest
 {
 public:
-	enum class Type {UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
+	enum class Type {CALLBACK, UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
 	virtual std::string toPrettyString() const {return toString();};
 
 	virtual bool isResponseRequired() const {return false;};
 	virtual ~IRequest(){};
+};
+
+class CCallbaclRequest : public IRequest
+{
+	std::string waitFor;
+	std::unique_ptr<IRequest> call;
+
+public:
+	CCallbaclRequest(const std::string& dependency, std::unique_ptr<IRequest> req)
+		: waitFor(dependency), call(std::move(req)) {}
+	Type getType() const {return Type::CALLBACK;}
+	std::string toString() const
+	{
+		return c_sCallback + "\n" + waitFor + "\n" + call->toString();
+	}
+	std::string toPrettyString()
+	{
+		return "[call after " + waitFor + "]: " + call->toPrettyString();
+	}
 };
 
 class CUnaryOpRequest : public IRequest
