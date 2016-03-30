@@ -46,11 +46,21 @@ void CTasksCreator::run()
 	Log("Manager terminated.");
 }
 
-void CTasksCreator::sendRequest(std::unique_ptr<IRequest> const & request)
+std::string CTasksCreator::getUniqueCorrelationID()
+{
+	return std::to_string(std::rand());
+}
+
+// TODO add a way to publish to callback queues
+std::string CTasksCreator::sendRequest(std::unique_ptr<IRequest> const & request,
+		const std::string& corrID)
 {
 	AMQP::Envelope env(request->toString());
-	env.setCorrelationID(std::to_string(std::rand()));
+	env.setCorrelationID(corrID);
 	env.setReplyTo(sResponsesQueue);
+	pChannel->declareQueue(c_sCallback + "-" + env.correlationID(), AMQP::durable);
 	pChannel->publish(sBatchExc, sTaskRoutKey, env);
 	Log("Sent message [" + env.correlationID() + "]: " + request->toPrettyString());
+
+	return corrID;
 }

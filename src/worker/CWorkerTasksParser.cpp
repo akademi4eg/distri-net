@@ -30,6 +30,16 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             pChannel->publish("", message.replyTo(), env);
             Log("Sent response [" + env.correlationID() + "]: " + response->toString());
 		}
+        else if (request->getType() == IRequest::Type::CALLBACK)
+        {
+        	CCallbackResponse *resp = reinterpret_cast<CCallbackResponse*>(response.get());
+            AMQP::Envelope env(resp->toString());
+            env.setCorrelationID(resp->getCorrelationID());
+            env.setReplyTo(message.replyTo());
+            std::string callQueue = c_sCallback + "-" + resp->getDependency();
+            pChannel->publish("", callQueue, env);
+            Log("Sent callback to " + callQueue);
+        }
         pChannel->ack(deliveryTag);
     });
 
@@ -71,6 +81,14 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 		msgStream >> keyOther.sSource >> keyOther.iIndex >> keyOther.iEntrySize >> op;
 		return std::unique_ptr<IRequest>(new CBinaryOpRequest(keyBase, keyOther, (Operations::BinaryType)op));
 	}
+	else if (line == c_sCallback)
+	{
+		std::string waitFor, correlationID;
+		msgStream >> waitFor >> correlationID;
+		std::string requestStr(msgStream.str().substr(msgStream.tellg()));
+		return std::unique_ptr<IRequest>(new CCallbackRequest(correlationID, waitFor,
+				parseRequest(requestStr)));
+	}
 	else if (line == c_sVersion)
 	{
 		return std::unique_ptr<IRequest>(new CVersionRequest());
@@ -87,6 +105,12 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 {
 	switch (request->getType())
 	{
+	case IRequest::Type::CALLBACK:
+	{
+		CCallbackRequest *callback = reinterpret_cast<CCallbackRequest*>(request.get());
+		return std::unique_ptr<IResponse>(new CCallbackResponse(callback->getDependency(),
+				callback->getCorrelationID(), std::move(callback->getCall())));
+	}
 	case IRequest::Type::UNARY_OP:
 	{
 		CUnaryOpRequest *unaryOp = reinterpret_cast<CUnaryOpRequest*>(request.get());

@@ -1,1 +1,1 @@
-const std::string c_sProduceVersion("0.1.2");
+const std::string c_sProduceVersion("0.1.3");

@@ -25,23 +25,28 @@ public:
 	virtual ~IRequest(){};
 };
 
-class CCallbaclRequest : public IRequest
+class CCallbackRequest : public IRequest
 {
+	std::string callCorrelationID;
 	std::string waitFor;
 	std::unique_ptr<IRequest> call;
 
 public:
-	CCallbaclRequest(const std::string& dependency, std::unique_ptr<IRequest> req)
-		: waitFor(dependency), call(std::move(req)) {}
+	CCallbackRequest(const std::string& correlationID, const std::string& dependency,
+			std::unique_ptr<IRequest> req)
+		: callCorrelationID(correlationID), waitFor(dependency), call(std::move(req)) {}
 	Type getType() const {return Type::CALLBACK;}
 	std::string toString() const
 	{
-		return c_sCallback + "\n" + waitFor + "\n" + call->toString();
+		return c_sCallback + "\n" + waitFor + "\n" + callCorrelationID + "\n" + call->toString();
 	}
 	std::string toPrettyString()
 	{
-		return "[call after " + waitFor + "]: " + call->toPrettyString();
+		return "[call " + callCorrelationID + " after " + waitFor + "]: " + call->toPrettyString();
 	}
+	std::string getDependency() const {return waitFor;}
+	std::string getCorrelationID() const {return callCorrelationID;}
+	std::unique_ptr<IRequest> getCall() {return std::move(call);}
 };
 
 class CUnaryOpRequest : public IRequest
@@ -119,6 +124,20 @@ public:
 	virtual std::string toString() const = 0;
 
 	virtual ~IResponse(){};
+};
+
+class CCallbackResponse : public IResponse
+{
+	std::string waitFor;
+	std::string correlationID;
+	std::unique_ptr<IRequest> call;
+public:
+	CCallbackResponse(const std::string& dependency, const std::string& corrID,
+			std::unique_ptr<IRequest> request)
+		: waitFor(dependency), correlationID(corrID), call(std::move(request)) {}
+	std::string getDependency() const {return waitFor;}
+	std::string getCorrelationID() const {return correlationID;}
+	std::string toString() const {return call->toString();}
 };
 
 class CVersionResponse : public IResponse

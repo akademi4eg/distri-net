@@ -16,5 +16,8 @@ public:
 	virtual ~CTasksCreator();
 
 	void run();
-	void sendRequest(std::unique_ptr<IRequest> const & request);
+	std::string sendRequest(std::unique_ptr<IRequest> const & request,
+			const std::string& corrID = getUniqueCorrelationID());
+
+	static std::string getUniqueCorrelationID();
 };
