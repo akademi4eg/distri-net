@@ -20,6 +20,7 @@ public:
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
 	virtual std::string toPrettyString() const {return toString();};
+	virtual bool isReadOnly() const {return false;};
 
 	virtual bool isResponseRequired() const {return false;};
 	virtual ~IRequest(){};
@@ -47,6 +48,7 @@ public:
 	std::string getDependency() const {return waitFor;}
 	std::string getCorrelationID() const {return callCorrelationID;}
 	std::unique_ptr<IRequest> getCall() {return std::move(call);}
+	bool isReadOnly() const {return true;};
 };
 
 class CUnaryOpRequest : public IRequest
@@ -101,6 +103,7 @@ public:
 	Type getType() const {return Type::VERSION;};
 	std::string toString() const {return c_sVersion;};
 	bool isResponseRequired() const {return true;};
+	bool isReadOnly() const {return true;};
 };
 
 class CExitRequest : public IRequest
@@ -108,6 +111,7 @@ class CExitRequest : public IRequest
 public:
 	Type getType() const {return Type::EXIT;};
 	std::string toString() const {return c_sExit;};
+	bool isReadOnly() const {return true;};
 };
 
 class CUnsupportedRequest : public IRequest
@@ -116,6 +120,7 @@ public:
 	Type getType() const {return Type::UNSUPPORTED;};
 	std::string toString() const {return c_sUnsup;};
 	bool isResponseRequired() const {return true;};
+	bool isReadOnly() const {return true;};
 };
 
 class IResponse

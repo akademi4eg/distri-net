@@ -3,10 +3,18 @@
 #include <string>
 #include <sstream>
 
+#include <Poco/Net/HTTPClientSession.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/StreamCopier.h>
+#include <Poco/Exception.h>
+#include <Poco/Net/HTTPBasicCredentials.h>
+
 #define Log(x) (std::cout << x << std::endl)
 
 CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
 		const AMQP::Login& login, const std::string& vhost)
+: AMQPCreds(login), AMQPHost(host), AMQPPort(port), AMQPVHost(vhost)
 {
 	Log("Setting up connection to Rabbit.");
 	pConnectionHandler = new SimplePocoHandler(host, port);
@@ -30,7 +38,8 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             pChannel->publish("", message.replyTo(), env);
             Log("Sent response [" + env.correlationID() + "]: " + response->toString());
 		}
-        else if (request->getType() == IRequest::Type::CALLBACK)
+
+        if (request->getType() == IRequest::Type::CALLBACK)
         {
         	CCallbackResponse *resp = reinterpret_cast<CCallbackResponse*>(response.get());
             AMQP::Envelope env(resp->toString());
@@ -39,6 +48,12 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             std::string callQueue = c_sCallback + "-" + resp->getDependency();
             pChannel->publish("", callQueue, env);
             Log("Sent callback to " + callQueue);
+        }
+
+        if (!request->isReadOnly())
+        {
+        	Log("Allowing execution of calls waiting for " + message.correlationID());
+        	allowCallbacksProcessing(message.correlationID());
         }
         pChannel->ack(deliveryTag);
     });
@@ -51,6 +66,30 @@ CWorkerTasksParser::~CWorkerTasksParser()
 	delete pChannel;
 	delete pConnection;
 	delete pConnectionHandler;
+}
+
+void CWorkerTasksParser::allowCallbacksProcessing(const std::string& corrID)
+{
+	std::string uri("amqp://"+AMQPCreds.user()+"@/%2f"+AMQPVHost.substr(1));
+	std::string srcQueue(c_sCallback + "-" + corrID);
+	std::string apiCall("/api/parameters/shovel/%2f"+AMQPVHost.substr(1)+"/"+srcQueue);
+	std::string cmd("{\"value\": {\"src-uri\":  \""+uri+"\", \"src-queue\": \""+srcQueue+"\",\"dest-uri\": \""+uri+"\", \"dest-queue\": \"batches_tasks\"}}");
+	try
+	{
+		Poco::Net::HTTPBasicCredentials creds(AMQPCreds.user(), AMQPCreds.password());
+		Poco::Net::HTTPClientSession session(AMQPHost, 15672);
+		Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_PUT, apiCall);
+		request.setContentType("application/json");
+		request.setContentLength(cmd.size());
+		creds.authenticate(request);
+		std::ostream& os = session.sendRequest(request);
+		std::istringstream ss_in(cmd);
+		Poco::StreamCopier::copyStream(ss_in, os);
+	}
+    catch (Poco::Exception &ex)
+    {
+        Log("Failed to update callbacks: " + ex.displayText());
+    }
 }
 
 void CWorkerTasksParser::run()

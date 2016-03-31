@@ -8,6 +8,10 @@ class CWorkerTasksParser {
 	SimplePocoHandler *pConnectionHandler;
 	AMQP::Connection *pConnection;
 	AMQP::Channel *pChannel;
+	AMQP::Login AMQPCreds;
+	std::string AMQPHost;
+	uint16_t AMQPPort;
+	std::string AMQPVHost;
 	CLocalFileReader fileReader;
 public:
 	CWorkerTasksParser(const std::string& host, uint16_t port,
@@ -20,4 +24,7 @@ public:
 
 	bool applyUnaryOp(const SDataKey& key, Operations::UnaryType op);
 	bool applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther, Operations::BinaryType op);
+
+private:
+	void allowCallbacksProcessing(const std::string& corrID);
 };
