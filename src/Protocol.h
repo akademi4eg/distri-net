@@ -24,6 +24,7 @@ public:
 	virtual std::string toString() const = 0;
 	virtual std::string toPrettyString() const {return toString();};
 	virtual bool isReadOnly() const {return false;};
+	virtual std::vector<SDataKey> getAffectedData() const {return std::vector<SDataKey>();};
 
 	virtual bool isResponseRequired() const {return false;};
 	virtual ~IRequest(){};
@@ -31,12 +32,14 @@ public:
 
 class CCallbackRequest : public IRequest
 {
-	std::string callCorrelationID;
-	std::string waitFor;
+	CorrelationID callCorrelationID;
+	CorrelationID waitFor;
 	std::unique_ptr<IRequest> call;
 
 public:
-	CCallbackRequest(const std::string& correlationID, const std::string& dependency,
+	static std::string formCallbackName(CorrelationID corrID) {return c_sCallback + "-" + corrID;}
+
+	CCallbackRequest(const CorrelationID& correlationID, const CorrelationID& dependency,
 			std::unique_ptr<IRequest> req)
 		: callCorrelationID(correlationID), waitFor(dependency), call(std::move(req)) {}
 	Type getType() const {return Type::CALLBACK;}
@@ -48,9 +51,9 @@ public:
 	{
 		return "[call " + callCorrelationID + " after " + waitFor + "]: " + call->toPrettyString();
 	}
-	std::string getDependency() const {return waitFor;}
-	std::string getCorrelationID() const {return callCorrelationID;}
-	std::string getBaseCorrelationID() const
+	CorrelationID getDependency() const {return waitFor;}
+	CorrelationID getCorrelationID() const {return callCorrelationID;}
+	CorrelationID getBaseCorrelationID() const
 	{
 		if (call->getType() == Type::CALLBACK)
 			return reinterpret_cast<CCallbackRequest*>(call.get())->getBaseCorrelationID();
@@ -59,6 +62,7 @@ public:
 	}
 	std::unique_ptr<IRequest> getCall() {return std::move(call);}
 	bool isReadOnly() const {return true;};
+	std::vector<SDataKey> getAffectedData() const {return call->getAffectedData();};
 };
 
 class CUnaryOpRequest : public IRequest
@@ -87,6 +91,7 @@ public:
 	SDataKey getKey() {return key;};
 	Operations::UnaryType getOp() const {return op;};
 	OpParams getParams() const {return params;}
+	std::vector<SDataKey> getAffectedData() const {return std::vector<SDataKey>(1, key);}
 };
 
 class CBinaryOpRequest : public IRequest
@@ -118,6 +123,13 @@ public:
 	SDataKey getOtherKey() {return keyOther;};
 	Operations::BinaryType getOp() const {return op;};
 	OpParams getParams() const {return params;}
+	std::vector<SDataKey> getAffectedData() const
+	{
+		std::vector<SDataKey> res(2);
+		res.push_back(keyBase);
+		res.push_back(keyOther);
+		return res;
+	}
 };
 
 class CVersionRequest : public IRequest

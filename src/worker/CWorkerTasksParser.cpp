@@ -45,7 +45,7 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             AMQP::Envelope env(resp->toString());
             env.setCorrelationID(resp->getCorrelationID());
             env.setReplyTo(message.replyTo());
-            std::string callQueue = c_sCallback + "-" + resp->getDependency();
+            std::string callQueue = CCallbackRequest::formCallbackName(resp->getDependency());
             pChannel->publish("", callQueue, env);
             Log("Sent callback to " + callQueue + ": " + resp->toString());
         }

@@ -23,38 +23,29 @@ int main(int argc, const char* argv[])
 	key2.sSource = "datafile2";
 	key2.iIndex = 1;
 	int arSize = 5;
-	std::string id1, id2, inc2id, preAddID, addID, finalID;
-	inc2id = CTasksCreator::getUniqueCorrelationID();
-	preAddID = CTasksCreator::getUniqueCorrelationID();
-	addID = CTasksCreator::getUniqueCorrelationID();
-	finalID = CTasksCreator::getUniqueCorrelationID();
-	id1 = manager.sendRequest(
-			std::unique_ptr<IRequest>(
-					new CUnaryOpRequest(key, Operations::UnaryType::ZEROS, OpParams(1, arSize))));
-	id2 = manager.sendRequest(
-			std::unique_ptr<IRequest>(
-					new CUnaryOpRequest(key2, Operations::UnaryType::ZEROS, OpParams(1, arSize))));
 	manager.sendRequest(
 			std::unique_ptr<IRequest>(
-					new CCallbackRequest(inc2id, id2,
-							std::unique_ptr<IRequest>(
-									new CUnaryOpRequest(key2,
-											Operations::UnaryType::INCREMENT)))));
+					new CUnaryOpRequest(key, Operations::UnaryType::ZEROS,
+							OpParams(1, arSize))));
 	manager.sendRequest(
 			std::unique_ptr<IRequest>(
-					new CCallbackRequest(preAddID, id1,
-							std::unique_ptr<IRequest>(
-									new CCallbackRequest(addID, inc2id,
-											std::unique_ptr<IRequest>(
-													new CBinaryOpRequest(key,
-															key2,
-															Operations::BinaryType::ADD)))))));
+					new CUnaryOpRequest(key2, Operations::UnaryType::ZEROS,
+							OpParams(1, arSize))));
 	manager.sendRequest(
-			std::unique_ptr<IRequest>(
-					new CCallbackRequest(finalID, addID,
-							std::unique_ptr<IRequest>(
-									new CUnaryOpRequest(key2,
-											Operations::UnaryType::INCREMENT)))));
+			manager.applyDependencies(
+					std::unique_ptr<IRequest>(
+							new CUnaryOpRequest(key2,
+									Operations::UnaryType::INCREMENT))));
+	manager.sendRequest(
+			manager.applyDependencies(
+					std::unique_ptr<IRequest>(
+							new CBinaryOpRequest(key, key2,
+									Operations::BinaryType::ADD))));
+	manager.sendRequest(
+			manager.applyDependencies(
+					std::unique_ptr<IRequest>(
+							new CUnaryOpRequest(key2,
+									Operations::UnaryType::INCREMENT))));
 	manager.run();
 	return 0;
 }
