@@ -4,6 +4,8 @@
 #include <memory>
 #include <amqpcpp.h>
 
+const uint32_t c_iHTTPRabbitPort = 15672;
+
 class SimplePocoHandlerImpl;
 class SimplePocoHandler: public AMQP::ConnectionHandler
 {

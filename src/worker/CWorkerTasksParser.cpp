@@ -68,16 +68,16 @@ CWorkerTasksParser::~CWorkerTasksParser()
 	delete pConnectionHandler;
 }
 
-void CWorkerTasksParser::allowCallbacksProcessing(const std::string& corrID)
+void CWorkerTasksParser::allowCallbacksProcessing(const CorrelationID& corrID)
 {
 	std::string uri("amqp://"+AMQPCreds.user()+"@/%2f"+AMQPVHost.substr(1));
-	std::string srcQueue(c_sCallback + "-" + corrID);
+	std::string srcQueue(CCallbackRequest::formCallbackName(corrID));
 	std::string apiCall("/api/parameters/shovel/%2f"+AMQPVHost.substr(1)+"/"+srcQueue);
 	std::string cmd("{\"value\": {\"src-uri\":  \""+uri+"\", \"src-queue\": \""+srcQueue+"\",\"dest-uri\": \""+uri+"\", \"dest-queue\": \"batches_tasks\"}}");
 	try
 	{
 		Poco::Net::HTTPBasicCredentials creds(AMQPCreds.user(), AMQPCreds.password());
-		Poco::Net::HTTPClientSession session(AMQPHost, 15672);
+		Poco::Net::HTTPClientSession session(AMQPHost, c_iHTTPRabbitPort);
 		Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_PUT, apiCall);
 		request.setContentType("application/json");
 		request.setContentLength(cmd.size());

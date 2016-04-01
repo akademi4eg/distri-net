@@ -29,5 +29,5 @@ public:
 			Operations::BinaryType op, const OpParams& params);
 
 private:
-	void allowCallbacksProcessing(const std::string& corrID);
+	void allowCallbacksProcessing(const CorrelationID& corrID);
 };

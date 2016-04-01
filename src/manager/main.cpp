@@ -16,10 +16,9 @@ int main(int argc, const char* argv[])
 	 * a = a+b
 	 * b = b+1
 	 */
-	SDataKey key;
+	SDataKey key, key2;
 	key.sSource = "datafile";
 	key.iIndex = 0;
-	SDataKey key2;
 	key2.sSource = "datafile2";
 	key2.iIndex = 1;
 	int arSize = 5;

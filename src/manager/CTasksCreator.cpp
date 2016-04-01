@@ -1,11 +1,17 @@
 #include <cstdlib>
 
 #include "CTasksCreator.h"
+#include <Poco/Net/HTTPClientSession.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/Exception.h>
+#include <Poco/Net/HTTPBasicCredentials.h>
 
 #define Log(x) (std::cout << x << std::endl)
 
 CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 		const AMQP::Login& login, const std::string& vhost)
+	: AMQPCreds(login), AMQPHost(host), AMQPPort(port), AMQPVHost(vhost)
 {
 
 	Log("Setting up connection to Rabbit.");
@@ -27,6 +33,13 @@ CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 			{
 				Log("Got response [" + message.correlationID() + "]: " + message.message());
 				pChannel->ack(deliveryTag);
+
+				if (message.correlationID() == requestsSent.back())
+				{
+					Log("Received last message response. Performing cleanup...");
+					for (CorrelationID corrID : requestsSent)
+						clearRequest(corrID);
+				}
 			};
 
 	pChannel->consume(sResponsesQueue).onReceived(receiveCallback);
@@ -49,35 +62,39 @@ void CTasksCreator::run()
 
 std::string CTasksCreator::getUniqueCorrelationID()
 {
-	return std::to_string(std::rand());
+	static uint64_t uid = 1;
+	return std::to_string(uid++);
 }
 
 // TODO add a way to publish to callback queues
-std::string CTasksCreator::sendRequest(
-		std::unique_ptr<IRequest> const & request, const std::string& corrID)
+void CTasksCreator::sendRequest(
+		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID)
 {
 	AMQP::Envelope env(request->toString());
 	env.setCorrelationID(corrID);
 	env.setReplyTo(sResponsesQueue);
-	CorrelationID idForDependencies;
-	if (request->getType() == IRequest::Type::CALLBACK)
-		idForDependencies =
-				reinterpret_cast<CCallbackRequest*>(request.get())->getBaseCorrelationID();
-	else
-		idForDependencies = env.correlationID();
-	pChannel->declareQueue(
-			CCallbackRequest::formCallbackName(idForDependencies),
-			AMQP::durable);
-	for (const SDataKey& key : request->getAffectedData())
+	std::vector<SDataKey> affectedData = request->getAffectedData();
+	if (!affectedData.empty())
 	{
-		dependencies[key.toString()] = idForDependencies;
+		CorrelationID idForDependencies;
+		if (request->getType() == IRequest::Type::CALLBACK)
+			idForDependencies =
+					reinterpret_cast<CCallbackRequest*>(request.get())->getBaseCorrelationID();
+		else
+			idForDependencies = env.correlationID();
+		pChannel->declareQueue(
+				CCallbackRequest::formCallbackName(idForDependencies),
+				AMQP::durable);
+		requestsSent.push_back(idForDependencies);
+		for (const SDataKey& key : affectedData)
+		{
+			dependencies[key.toString()] = idForDependencies;
+		}
 	}
 	pChannel->publish(sBatchExc, sTaskRoutKey, env);
 	Log(
 			"Sent message [" + env.correlationID() + "]: "
 					+ request->toPrettyString());
-
-	return corrID;
 }
 
 std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
@@ -138,4 +155,28 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		break;
 	}
 	return request;
+}
+
+void CTasksCreator::clearRequest(const CorrelationID& corrID)
+{
+	std::string srcQueue(CCallbackRequest::formCallbackName(corrID));
+	std::string apiCall("/api/parameters/shovel/%2f"+AMQPVHost.substr(1)+"/"+srcQueue);
+	try
+	{
+		Poco::Net::HTTPBasicCredentials creds(AMQPCreds.user(), AMQPCreds.password());
+		Poco::Net::HTTPClientSession session(AMQPHost, c_iHTTPRabbitPort);
+		Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_DELETE, apiCall);
+		creds.authenticate(request);
+		session.sendRequest(request);
+		Poco::Net::HTTPResponse response;
+		std::istream& is = session.receiveResponse(response);
+		std::string line;
+		while (!is.eof())
+			is >> line;
+	}
+    catch (Poco::Exception &ex)
+    {
+        Log("Failed to remove callback for " + corrID + ": " + ex.displayText());
+    }
+	pChannel->removeQueue(srcQueue);
 }
