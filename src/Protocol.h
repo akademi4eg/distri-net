@@ -47,6 +47,13 @@ public:
 	}
 	std::string getDependency() const {return waitFor;}
 	std::string getCorrelationID() const {return callCorrelationID;}
+	std::string getBaseCorrelationID() const
+	{
+		if (call->getType() == Type::CALLBACK)
+			return reinterpret_cast<CCallbackRequest*>(call.get())->getBaseCorrelationID();
+		else
+			return getCorrelationID();
+	}
 	std::unique_ptr<IRequest> getCall() {return std::move(call);}
 	bool isReadOnly() const {return true;};
 };

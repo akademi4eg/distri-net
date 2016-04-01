@@ -58,7 +58,12 @@ std::string CTasksCreator::sendRequest(std::unique_ptr<IRequest> const & request
 	AMQP::Envelope env(request->toString());
 	env.setCorrelationID(corrID);
 	env.setReplyTo(sResponsesQueue);
-	pChannel->declareQueue(c_sCallback + "-" + env.correlationID(), AMQP::durable);
+	std::string callQueue;
+	if (request->getType() == IRequest::Type::CALLBACK)
+		callQueue = reinterpret_cast<CCallbackRequest*>(request.get())->getBaseCorrelationID();
+	else
+		callQueue = env.correlationID();
+	pChannel->declareQueue(c_sCallback + "-" + callQueue, AMQP::durable);
 	pChannel->publish(sBatchExc, sTaskRoutKey, env);
 	Log("Sent message [" + env.correlationID() + "]: " + request->toPrettyString());
 
