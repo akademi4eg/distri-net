@@ -2,6 +2,9 @@
 #include "IDataReader.h"
 #include "Operations.h"
 
+typedef std::string CorrelationID;
+typedef std::vector<double> OpParams;
+
 static const char *c_UnaryOps[] = {"ZEROS", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
 static const char *c_BinaryOps[] = {"ADD"};
 const std::string c_sWorker = "worker:";
@@ -62,13 +65,18 @@ class CUnaryOpRequest : public IRequest
 {
 	SDataKey key;
 	Operations::UnaryType op;
+	OpParams params;
 public:
-	CUnaryOpRequest(const SDataKey& akey, Operations::UnaryType aop)
-		: key(akey), op(aop) {};
+	CUnaryOpRequest(const SDataKey& akey, Operations::UnaryType aop,
+			const OpParams& opParams = OpParams())
+		: key(akey), op(aop), params(opParams) {};
 	Type getType() const {return Type::UNARY_OP;};
 	std::string toString() const
 	{
-		return c_sUnaryOp + "\n" + key.toString() + "\n" + std::to_string(op);
+		std::string res(c_sUnaryOp + "\n" + key.toString() + "\n" + std::to_string(op));
+		for (OpParams::value_type val : params)
+			res += "\n" + std::to_string(val);
+		return res;
 	};
 	std::string toPrettyString() const
 	{
@@ -78,6 +86,7 @@ public:
 	bool isResponseRequired() const {return true;};
 	SDataKey getKey() {return key;};
 	Operations::UnaryType getOp() const {return op;};
+	OpParams getParams() const {return params;}
 };
 
 class CBinaryOpRequest : public IRequest
@@ -85,13 +94,19 @@ class CBinaryOpRequest : public IRequest
 	SDataKey keyBase;
 	SDataKey keyOther;
 	Operations::BinaryType op;
+	OpParams params;
 public:
-	CBinaryOpRequest(const SDataKey& base, const SDataKey& other, Operations::BinaryType aop)
-		: keyBase(base), keyOther(other), op(aop) {};
+	CBinaryOpRequest(const SDataKey& base, const SDataKey& other,
+			Operations::BinaryType aop, const OpParams& opParams = OpParams())
+		: keyBase(base), keyOther(other), op(aop), params(opParams) {};
 	Type getType() const {return Type::BINARY_OP;};
 	std::string toString() const
 	{
-		return c_sBinaryOp + "\n" + keyBase.toString() + "\n" + keyOther.toString() + "\n" + std::to_string(op);
+		std::string res(c_sBinaryOp + "\n" + keyBase.toString() + "\n"
+				+ keyOther.toString() + "\n" + std::to_string(op));
+		for (OpParams::value_type val : params)
+			res += "\n" + std::to_string(val);
+		return res;
 	};
 	std::string toPrettyString() const
 	{
@@ -102,6 +117,7 @@ public:
 	SDataKey getBaseKey() {return keyBase;};
 	SDataKey getOtherKey() {return keyOther;};
 	Operations::BinaryType getOp() const {return op;};
+	OpParams getParams() const {return params;}
 };
 
 class CVersionRequest : public IRequest

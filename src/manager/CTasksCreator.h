@@ -2,6 +2,7 @@
 
 #include "../SimplePocoHandler.h"
 #include "../Protocol.h"
+#include <map>
 
 class CTasksCreator {
 	SimplePocoHandler *pConnectionHandler;
@@ -10,6 +11,8 @@ class CTasksCreator {
 	std::string sResponsesQueue;
 	std::string sBatchExc;
 	std::string sTaskRoutKey;
+
+	std::map<SDataKey, CorrelationID> dependencies;
 public:
 	CTasksCreator(const std::string& host, uint16_t port,
 			const AMQP::Login& login, const std::string& vhost);

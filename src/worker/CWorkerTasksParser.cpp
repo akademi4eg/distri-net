@@ -108,17 +108,32 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 	{
 		SDataKey key;
 		int op;
-		msgStream >> key.sSource >> key.iIndex >> key.iEntrySize >> op;
-		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key, (Operations::UnaryType)op));
+		msgStream >> key.sSource >> key.iIndex >> op;
+		OpParams params;
+		while (!msgStream.eof())
+		{
+			OpParams::value_type val;
+			msgStream >> val;
+			params.push_back(val);
+		}
+		return std::unique_ptr<IRequest>(new CUnaryOpRequest(key, (Operations::UnaryType)op, params));
 	}
 	else if (line == c_sBinaryOp)
 	{
 		SDataKey keyBase;
 		SDataKey keyOther;
 		int op;
-		msgStream >> keyBase.sSource >> keyBase.iIndex >> keyBase.iEntrySize;
-		msgStream >> keyOther.sSource >> keyOther.iIndex >> keyOther.iEntrySize >> op;
-		return std::unique_ptr<IRequest>(new CBinaryOpRequest(keyBase, keyOther, (Operations::BinaryType)op));
+		msgStream >> keyBase.sSource >> keyBase.iIndex;
+		msgStream >> keyOther.sSource >> keyOther.iIndex >> op;
+		OpParams params;
+		while (!msgStream.eof())
+		{
+			OpParams::value_type val;
+			msgStream >> val;
+			params.push_back(val);
+		}
+		return std::unique_ptr<IRequest>(new CBinaryOpRequest(keyBase, keyOther,
+				(Operations::BinaryType)op, params));
 	}
 	else if (line == c_sCallback)
 	{
@@ -153,7 +168,7 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 	case IRequest::Type::UNARY_OP:
 	{
 		CUnaryOpRequest *unaryOp = reinterpret_cast<CUnaryOpRequest*>(request.get());
-		if (applyUnaryOp(unaryOp->getKey(), unaryOp->getOp()))
+		if (applyUnaryOp(unaryOp->getKey(), unaryOp->getOp(), unaryOp->getParams()))
 			return std::unique_ptr<IResponse>(new CSuccessResponse());
 		else
 			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
@@ -161,7 +176,8 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 	case IRequest::Type::BINARY_OP:
 	{
 		CBinaryOpRequest *binaryOp = reinterpret_cast<CBinaryOpRequest*>(request.get());
-		if (applyBinaryOp(binaryOp->getBaseKey(), binaryOp->getOtherKey(), binaryOp->getOp()))
+		if (applyBinaryOp(binaryOp->getBaseKey(), binaryOp->getOtherKey(),
+				binaryOp->getOp(), binaryOp->getParams()))
 			return std::unique_ptr<IResponse>(new CSuccessResponse());
 		else
 			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
@@ -176,7 +192,8 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 	}
 }
 
-bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType op)
+bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType op,
+		const OpParams& params)
 {
 	std::unique_ptr<DataEntry> data;
 	if (op != Operations::UnaryType::ZEROS)
@@ -188,7 +205,9 @@ bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType
 	switch (op)
 	{
 	case Operations::UnaryType::ZEROS:
-		data = std::unique_ptr<DataEntry>(new DataEntry(key.iEntrySize, 0.0));
+		if (params.size() < 1)
+			return false;
+		data = std::unique_ptr<DataEntry>(new DataEntry(params[0], 0.0));
 		break;
 	case Operations::UnaryType::INCREMENT:
 		std::for_each(data->begin(), data->end(), Operations::increment);
@@ -205,15 +224,16 @@ bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType
 	return fileReader.saveData(key, *data);
 }
 
-bool CWorkerTasksParser::applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther, Operations::BinaryType op)
+bool CWorkerTasksParser::applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther,
+		Operations::BinaryType op, const OpParams& params)
 {
-	if (keyBase.iEntrySize != keyOther.iEntrySize)
-		return false;
 	std::unique_ptr<DataEntry> dataBase = fileReader.loadData(keyBase);
 	if (!dataBase)
 		return false;
 	std::unique_ptr<DataEntry> dataOther = fileReader.loadData(keyOther);
 	if (!dataOther)
+		return false;
+	if (dataBase->size() != dataOther->size())
 		return false;
 	switch (op)
 	{

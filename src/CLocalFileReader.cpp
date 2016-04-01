@@ -6,14 +6,20 @@
 
 std::unique_ptr<DataEntry> CLocalFileReader::loadData(const SDataKey& key)
 {
+	std::streampos fsize, finitpos;
 	std::ifstream input(key.getFilename().c_str(), std::ios::in | std::ios::binary);
 	if (!input)
 	{
 		Log("Failed to create input stream!");
 		return std::unique_ptr<DataEntry>(nullptr);
 	}
-	DataEntry *result = new DataEntry(key.iEntrySize);
-	input.read(reinterpret_cast<char*>(&(*result)[0]), key.iEntrySize*sizeof(DataEntry::value_type));
+	finitpos = input.tellg();
+    input.seekg( 0, std::ios::end );
+    fsize = input.tellg() - finitpos;
+    input.seekg(finitpos, std::ios::beg);
+    input.clear();
+	DataEntry *result = new DataEntry(fsize/sizeof(DataEntry::value_type));
+	input.read(reinterpret_cast<char*>(&(*result)[0]), fsize);
 	if (!input)
 	{
 		Log("Failed to read from stream!");

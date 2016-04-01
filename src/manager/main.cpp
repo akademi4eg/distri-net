@@ -19,11 +19,10 @@ int main(int argc, const char* argv[])
 	SDataKey key;
 	key.sSource = "datafile";
 	key.iIndex = 0;
-	key.iEntrySize = 10;
 	SDataKey key2;
 	key2.sSource = "datafile2";
 	key2.iIndex = 1;
-	key2.iEntrySize = 10;
+	int arSize = 5;
 	std::string id1, id2, inc2id, preAddID, addID, finalID;
 	inc2id = CTasksCreator::getUniqueCorrelationID();
 	preAddID = CTasksCreator::getUniqueCorrelationID();
@@ -31,10 +30,10 @@ int main(int argc, const char* argv[])
 	finalID = CTasksCreator::getUniqueCorrelationID();
 	id1 = manager.sendRequest(
 			std::unique_ptr<IRequest>(
-					new CUnaryOpRequest(key, Operations::UnaryType::ZEROS)));
+					new CUnaryOpRequest(key, Operations::UnaryType::ZEROS, OpParams(1, arSize))));
 	id2 = manager.sendRequest(
 			std::unique_ptr<IRequest>(
-					new CUnaryOpRequest(key2, Operations::UnaryType::ZEROS)));
+					new CUnaryOpRequest(key2, Operations::UnaryType::ZEROS, OpParams(1, arSize))));
 	manager.sendRequest(
 			std::unique_ptr<IRequest>(
 					new CCallbackRequest(inc2id, id2,

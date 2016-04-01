@@ -8,16 +8,15 @@ typedef std::vector<double> DataEntry;
 struct SDataKey
 {
 	std::string toString() const {
-		return sSource + "\n" + std::to_string(iIndex) + "\n" + std::to_string(iEntrySize);
+		return sSource + "\n" + std::to_string(iIndex);
 	};
 	std::string toPrettyString() const {
-		return sSource + "[index = " + std::to_string(iIndex) + ", size = " + std::to_string(iEntrySize) + "]";
+		return sSource + "[index = " + std::to_string(iIndex) + "]";
 	};
 	std::string getFilename() const {return sSource + ":" + std::to_string(iIndex);}
 
 	std::string sSource;
 	uintmax_t iIndex;
-	size_t iEntrySize;
 };
 
 class IDataReader

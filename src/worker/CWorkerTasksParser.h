@@ -2,6 +2,7 @@
 #include "../CLocalFileReader.h"
 #include "../SimplePocoHandler.h"
 #include "../Protocol.h"
+#include <vector>
 #include <memory>
 
 class CWorkerTasksParser {
@@ -22,8 +23,10 @@ public:
 	std::unique_ptr<IRequest> parseRequest(const std::string& msg) const;
 	std::unique_ptr<IResponse> processRequest(std::unique_ptr<IRequest> const & request);
 
-	bool applyUnaryOp(const SDataKey& key, Operations::UnaryType op);
-	bool applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther, Operations::BinaryType op);
+	bool applyUnaryOp(const SDataKey& key, Operations::UnaryType op,
+			const OpParams& params);
+	bool applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther,
+			Operations::BinaryType op, const OpParams& params);
 
 private:
 	void allowCallbacksProcessing(const std::string& corrID);
