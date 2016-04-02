@@ -3,9 +3,9 @@ language: cpp
 os: linux
 
 before_install:
-	- sudo apt-get update -qq
-	- sudo apt-get install -qq libpoco*
+- sudo apt-get update -qq
+- sudo apt-get install -qq libpoco*
 install:
-    - git clone https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
-    - cd ./AMQP-CPP && make && sudo make install
+- git clone https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
+- cd ./AMQP-CPP && make && sudo make install
 script: make
