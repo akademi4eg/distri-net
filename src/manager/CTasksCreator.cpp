@@ -37,8 +37,12 @@ CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 				if (message.correlationID() == requestsSent.back())
 				{
 					Log("Received last message response. Performing cleanup...");
-					for (CorrelationID corrID : requestsSent)
+					while (!requestsSent.empty())
+					{
+						CorrelationID corrID = requestsSent.front();
+						requestsSent.pop_front();
 						clearRequest(corrID);
+					}
 				}
 			};
 
@@ -178,5 +182,9 @@ void CTasksCreator::clearRequest(const CorrelationID& corrID)
     {
         Log("Failed to remove callback for " + corrID + ": " + ex.displayText());
     }
-	pChannel->removeQueue(srcQueue);
+	pChannel->removeQueue(srcQueue).onSuccess([&](int){
+		// if there are no request left, quit
+		if (requestsSent.empty())
+			pConnectionHandler->quit();
+	});
 }
