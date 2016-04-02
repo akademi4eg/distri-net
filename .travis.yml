@@ -9,4 +9,6 @@ before_install:
 install:
 - git clone https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
 - cd ./AMQP-CPP && make && sudo make install && cd ..
+
+before_script: mkdir build
 script: make
