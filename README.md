@@ -1,6 +1,8 @@
 # DistriNET
 Framework for distributed computing. Uses RabbitMQ to communicate between nodes.
 
+[![Build Status](https://travis-ci.org/akademi4eg/distri-net.svg?branch=master)](https://travis-ci.org/akademi4eg/distri-net)
+
 ## Dependencies
 * [POCO](http://pocoproject.org/)
 * [AMQP-CPP](https://github.com/CopernicaMarketingSoftware/AMQP-CPP)
