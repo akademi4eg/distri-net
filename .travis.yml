@@ -8,5 +8,5 @@ before_install:
 - sudo apt-get install -qq libpoco*
 install:
 - git clone https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
-- cd ./AMQP-CPP && make && sudo make install
+- cd ./AMQP-CPP && make && sudo make install && cd ..
 script: make
