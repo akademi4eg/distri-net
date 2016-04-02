@@ -4,7 +4,10 @@
 #include <memory>
 #include <amqpcpp.h>
 
-const uint32_t c_iHTTPRabbitPort = 15672;
+#ifndef RABBITMQ_API_PORT
+#define RABBITMQ_API_PORT 15672
+#endif
+const uint32_t c_iHTTPRabbitPort = RABBITMQ_API_PORT;
 
 class SimplePocoHandlerImpl;
 class SimplePocoHandler: public AMQP::ConnectionHandler
