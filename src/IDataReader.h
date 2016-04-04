@@ -7,6 +7,7 @@ typedef std::vector<double> DataEntry;
 
 struct SDataKey
 {
+	SDataKey(const std::string& fname = std::string(), uintmax_t idx = 0) : sSource(fname), iIndex(idx) {};
 	std::string toString() const {
 		return sSource + "\n" + std::to_string(iIndex);
 	};

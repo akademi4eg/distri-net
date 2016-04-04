@@ -7,6 +7,33 @@ typedef std::unique_ptr<IRequest> UniqueRequest;
 
 namespace RequestsFactory
 {
+UniqueRequest getFromString(const std::string& req,
+				std::vector<SDataKey> keys, const OpParams& params)
+{
+	int i = 0;
+	while (keys.size()==1 && i < Operations::UnaryType::UNARY_UNSUPPORTED)
+	{
+		if (req == c_UnaryOps[i])
+		{
+			// it is an unary operation
+			return UniqueRequest(
+				new CUnaryOpRequest(keys[0], (Operations::UnaryType)i, params));
+		}
+	}
+	i = 0;
+	while (keys.size()==2 && i < Operations::BinaryType::BINARY_UNSUPPORTED)
+	{
+		if (req == c_BinaryOps[i])
+		{
+			// it is a binary operation
+			return UniqueRequest(
+				new CBinaryOpRequest(keys[0], keys[1], (Operations::BinaryType)i, params));
+		}
+	}
+	// some wrong request
+	return UniqueRequest(new CUnsupportedRequest());
+}
+	
 UniqueRequest Zeros(const SDataKey& key, size_t num)
 {
 	return UniqueRequest(new CUnaryOpRequest(key, Operations::UnaryType::ZEROS,

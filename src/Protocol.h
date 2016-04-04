@@ -186,7 +186,7 @@ public:
 class CVersionResponse : public IResponse
 {
 public:
-	std::string toString() const {return c_sWorker+c_sProduceVersion;};
+	std::string toString() const {return c_sWorker+c_sProductVersion;};
 };
 
 class CErrorResponse : public IResponse

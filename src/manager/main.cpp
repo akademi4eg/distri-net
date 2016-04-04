@@ -2,10 +2,12 @@
 
 #include "CTasksCreator.h"
 #include "../RequestsFactory.h"
+#include "../Version.h"
 #define Log(x) (std::cout << x << std::endl)
 
 int main(int argc, const char* argv[])
 {
+	Log("Manager version "+c_sProductVersion);
 	CTasksCreator manager("localhost", 5672, AMQP::Login("dnet", "111111"),
 			"/dnet");
 	/**
@@ -23,13 +25,9 @@ int main(int argc, const char* argv[])
 	 * b = [2 2 2]
 	 * c = [1 1 1]
 	 */
-	SDataKey key, key2, key3;
-	key.sSource = "datafile";
-	key.iIndex = 0;
-	key2.sSource = "datafile2";
-	key2.iIndex = 0;
-	key3.sSource = "datafile3";
-	key3.iIndex = 0;
+	SDataKey key = CTasksCreator::getUniqueDatafile();
+	SDataKey key2 = CTasksCreator::getUniqueDatafile();
+	SDataKey key3 = CTasksCreator::getUniqueDatafile();
 	size_t arSize = 3;
 	manager.sendRequest(
 		RequestsFactory::Set(key, OpParams{ 1, 2, 3 })).sendRequest(

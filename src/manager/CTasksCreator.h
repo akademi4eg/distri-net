@@ -33,6 +33,7 @@ public:
 	std::unique_ptr<IRequest> applyDependencies(std::unique_ptr<IRequest> request);
 
 	static std::string getUniqueCorrelationID();
+	static SDataKey getUniqueDatafile();
 private:
 	void clearRequest(const CorrelationID& corrID);
 };

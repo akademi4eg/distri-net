@@ -8,6 +8,7 @@
 #include <Poco/Net/HTTPBasicCredentials.h>
 
 #define Log(x) (std::cout << x << std::endl)
+const std::string c_sDatafilePrefix = "datafile-";
 
 CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 		const AMQP::Login& login, const std::string& vhost)
@@ -62,6 +63,12 @@ void CTasksCreator::run()
 	Log("Manager started.");
 	pConnectionHandler->loop();
 	Log("Manager terminated.");
+}
+
+SDataKey CTasksCreator::getUniqueDatafile()
+{
+	static uint64_t uid = 1;
+	return SDataKey(c_sDatafilePrefix + std::to_string(uid++), 0);
 }
 
 std::string CTasksCreator::getUniqueCorrelationID()
