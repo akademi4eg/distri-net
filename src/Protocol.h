@@ -6,7 +6,7 @@ typedef std::string CorrelationID;
 typedef std::vector<double> OpParams;
 
 static const char *c_UnaryOps[] = {"ZEROS", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
-static const char *c_BinaryOps[] = {"ADD"};
+static const char *c_BinaryOps[] = {"ADD", "SUB", "MUL", "DIV", "COPY"};
 const std::string c_sWorker = "worker:";
 const std::string c_sCallback = "CALLBACK";
 const std::string c_sUnaryOp = "UNARY_OP";
@@ -24,6 +24,7 @@ public:
 	virtual std::string toString() const = 0;
 	virtual std::string toPrettyString() const {return toString();};
 	virtual bool isReadOnly() const {return false;};
+	// TODO separate read and write dependencies
 	virtual std::vector<SDataKey> getAffectedData() const {return std::vector<SDataKey>();};
 
 	virtual bool isResponseRequired() const {return false;};

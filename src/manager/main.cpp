@@ -12,16 +12,24 @@ int main(int argc, const char* argv[])
 	 * Execute simple program:
 	 * a = 0
 	 * b = 0
+	 * a = a-1
 	 * b = b+1
 	 * a = a+b
+	 * c = b
 	 * b = b+1
+	 * Result:
+	 * a = zeros
+	 * b = twos
+	 * c = ones
 	 */
-	SDataKey key, key2;
+	SDataKey key, key2, key3;
 	key.sSource = "datafile";
 	key.iIndex = 0;
 	key2.sSource = "datafile2";
-	key2.iIndex = 1;
-	int arSize = 5;
+	key2.iIndex = 0;
+	key3.sSource = "datafile3";
+	key3.iIndex = 0;
+	int arSize = 3;
 	manager.sendRequest(
 			std::unique_ptr<IRequest>(
 					new CUnaryOpRequest(key, Operations::UnaryType::ZEROS,
@@ -33,6 +41,11 @@ int main(int argc, const char* argv[])
 	manager.sendRequest(
 			manager.applyDependencies(
 					std::unique_ptr<IRequest>(
+							new CUnaryOpRequest(key,
+									Operations::UnaryType::DECREMENT))));
+	manager.sendRequest(
+			manager.applyDependencies(
+					std::unique_ptr<IRequest>(
 							new CUnaryOpRequest(key2,
 									Operations::UnaryType::INCREMENT))));
 	manager.sendRequest(
@@ -40,6 +53,11 @@ int main(int argc, const char* argv[])
 					std::unique_ptr<IRequest>(
 							new CBinaryOpRequest(key, key2,
 									Operations::BinaryType::ADD))));
+	manager.sendRequest(
+			manager.applyDependencies(
+					std::unique_ptr<IRequest>(
+							new CBinaryOpRequest(key3, key2,
+									Operations::BinaryType::COPY))));
 	manager.sendRequest(
 			manager.applyDependencies(
 					std::unique_ptr<IRequest>(

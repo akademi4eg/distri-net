@@ -227,14 +227,18 @@ bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType
 bool CWorkerTasksParser::applyBinaryOp(const SDataKey& keyBase, const SDataKey& keyOther,
 		Operations::BinaryType op, const OpParams& params)
 {
-	std::unique_ptr<DataEntry> dataBase = fileReader.loadData(keyBase);
-	if (!dataBase)
-		return false;
 	std::unique_ptr<DataEntry> dataOther = fileReader.loadData(keyOther);
 	if (!dataOther)
 		return false;
-	if (dataBase->size() != dataOther->size())
-		return false;
+	std::unique_ptr<DataEntry> dataBase;
+	if (op != Operations::BinaryType::COPY)
+	{
+		dataBase = fileReader.loadData(keyBase);
+		if (!dataBase)
+			return false;
+		if (dataBase->size() != dataOther->size())
+			return false;
+	}
 	switch (op)
 	{
 	case Operations::BinaryType::ADD:
@@ -244,6 +248,38 @@ bool CWorkerTasksParser::applyBinaryOp(const SDataKey& keyBase, const SDataKey& 
 		{
 			Operations::add(*base, *other);
 		}
+		break;
+	}
+	case Operations::BinaryType::SUB:
+	{
+		DataEntry::iterator other = dataOther->begin();
+		for (DataEntry::iterator base = dataBase->begin(); base != dataBase->end(); ++base, ++other)
+		{
+			Operations::sub(*base, *other);
+		}
+		break;
+	}
+	case Operations::BinaryType::MUL:
+	{
+		DataEntry::iterator other = dataOther->begin();
+		for (DataEntry::iterator base = dataBase->begin(); base != dataBase->end(); ++base, ++other)
+		{
+			Operations::mul(*base, *other);
+		}
+		break;
+	}
+	case Operations::BinaryType::DIV:
+	{
+		DataEntry::iterator other = dataOther->begin();
+		for (DataEntry::iterator base = dataBase->begin(); base != dataBase->end(); ++base, ++other)
+		{
+			Operations::div(*base, *other);
+		}
+		break;
+	}
+	case Operations::BinaryType::COPY:
+	{
+		dataBase = std::unique_ptr<DataEntry>(dataOther.release());
 		break;
 	}
 	default:

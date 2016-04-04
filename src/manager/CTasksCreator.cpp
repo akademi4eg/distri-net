@@ -185,6 +185,6 @@ void CTasksCreator::clearRequest(const CorrelationID& corrID)
 	pChannel->removeQueue(srcQueue).onSuccess([&](int){
 		// if there are no request left, quit
 		if (requestsSent.empty())
-			pConnectionHandler->quit();
+			pConnection->close();
 	});
 }
