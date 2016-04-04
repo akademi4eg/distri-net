@@ -70,6 +70,12 @@ std::string CTasksCreator::getUniqueCorrelationID()
 	return std::to_string(uid++);
 }
 
+void CTasksCreator::sendDependentRequest(
+		std::unique_ptr<IRequest> request, const CorrelationID& corrID)
+{
+	sendRequest(applyDependencies(std::move(request)), corrID);
+}
+
 // TODO add a way to publish to callback queues
 void CTasksCreator::sendRequest(
 		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID)

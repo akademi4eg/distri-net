@@ -39,36 +39,30 @@ int main(int argc, const char* argv[])
 			std::unique_ptr<IRequest>(
 					new CUnaryOpRequest(key2, Operations::UnaryType::ZEROS,
 							OpParams(1, arSize))));
-	manager.sendRequest(
-			manager.applyDependencies(
+	manager.sendDependentRequest(
 					std::unique_ptr<IRequest>(
 							new CUnaryOpRequest(key,
-									Operations::UnaryType::DECREMENT))));
-	manager.sendRequest(
-			manager.applyDependencies(
+									Operations::UnaryType::DECREMENT)));
+	manager.sendDependentRequest(
 					std::unique_ptr<IRequest>(
 							new CUnaryOpRequest(key2,
-									Operations::UnaryType::INCREMENT))));
-	manager.sendRequest(
-			manager.applyDependencies(
+									Operations::UnaryType::INCREMENT)));
+	manager.sendDependentRequest(
 					std::unique_ptr<IRequest>(
 							new CBinaryOpRequest(key, key2,
-									Operations::BinaryType::ADD))));
-	manager.sendRequest(
-			manager.applyDependencies(
+									Operations::BinaryType::ADD)));
+	manager.sendDependentRequest(
 					std::unique_ptr<IRequest>(
 							new CBinaryOpRequest(key3, key2,
-									Operations::BinaryType::COPY))));
-	manager.sendRequest(
-			manager.applyDependencies(
+									Operations::BinaryType::COPY)));
+	manager.sendDependentRequest(
 					std::unique_ptr<IRequest>(
 							new CUnaryOpRequest(key2,
-									Operations::UnaryType::INCREMENT))));
-	manager.sendRequest(
-			manager.applyDependencies(
+									Operations::UnaryType::INCREMENT)));
+	manager.sendDependentRequest(
 					std::unique_ptr<IRequest>(
 							new CBinaryOpRequest(key, key2,
-									Operations::BinaryType::DIV))));
+									Operations::BinaryType::DIV)));
 	manager.run();
 	return 0;
 }

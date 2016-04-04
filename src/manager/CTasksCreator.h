@@ -26,6 +26,8 @@ public:
 	virtual ~CTasksCreator();
 
 	void run();
+	void sendDependentRequest(std::unique_ptr<IRequest> request,
+			const CorrelationID& corrID = getUniqueCorrelationID());
 	void sendRequest(std::unique_ptr<IRequest> const & request,
 			const CorrelationID& corrID = getUniqueCorrelationID());
 	std::unique_ptr<IRequest> applyDependencies(std::unique_ptr<IRequest> request);
