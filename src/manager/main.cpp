@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <map>
 
 #include "CTasksCreator.h"
 #include "../RequestsFactory.h"
@@ -8,36 +11,33 @@
 int main(int argc, const char* argv[])
 {
 	Log("Manager version "+c_sProductVersion);
+	if (argc < 2)
+	{
+		Log("Input file expected.");
+		return 1;
+	}
 	CTasksCreator manager("localhost", 5672, AMQP::Login("dnet", "111111"),
 			"/dnet");
-	/**
-	 * Execute simple program:
-	 * a = [1, 2, 3]
-	 * b = [0, 0, 0]
-	 * a = a-1
-	 * b = b+1
-	 * a = a+b
-	 * c = b
-	 * b = b+1
-	 * a = a/b
-	 * Result:
-	 * a = [0.5 1 1.5]
-	 * b = [2 2 2]
-	 * c = [1 1 1]
-	 */
-	SDataKey key = CTasksCreator::getUniqueDatafile();
-	SDataKey key2 = CTasksCreator::getUniqueDatafile();
-	SDataKey key3 = CTasksCreator::getUniqueDatafile();
-	size_t arSize = 3;
-	manager.sendRequest(
-		RequestsFactory::Set(key, OpParams{ 1, 2, 3 })).sendRequest(
-		RequestsFactory::Zeros(key2, arSize)).sendDependentRequest(
-		RequestsFactory::Dec(key)).sendDependentRequest(
-		RequestsFactory::Inc(key2)).sendDependentRequest(
-		RequestsFactory::Add(key, key2)).sendDependentRequest(
-		RequestsFactory::Copy(key3, key2)).sendDependentRequest(
-		RequestsFactory::Inc(key2)).sendDependentRequest(
-		RequestsFactory::Div(key, key2));
+	std::ifstream infile(argv[1]);
+	if (!infile)
+	{
+		Log("Failed to open file " + std::string(argv[1]));
+		return 2;
+	}
+	
+	std::string line;
+	std::map<std::string, SDataKey> vars;
+	while (std::getline(infile, line))
+	{
+		if (line.substr(0, 2) == "//") // comment
+			continue;
+		std::istringstream iss(line);
+		std::string cmd;
+		iss >> cmd;
+		Log(cmd);
+	}
+	
+	infile.close();
 	manager.run();
 	return 0;
 }
