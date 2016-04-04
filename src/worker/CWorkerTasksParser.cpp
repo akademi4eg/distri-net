@@ -196,7 +196,8 @@ bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType
 		const OpParams& params)
 {
 	std::unique_ptr<DataEntry> data;
-	if (op != Operations::UnaryType::ZEROS)
+	if (op != Operations::UnaryType::ZEROS
+			&& op != Operations::UnaryType::SET)
 	{
 		data = fileReader.loadData(key);
 		if (!data)
@@ -208,6 +209,9 @@ bool CWorkerTasksParser::applyUnaryOp(const SDataKey& key, Operations::UnaryType
 		if (params.size() < 1)
 			return false;
 		data = std::unique_ptr<DataEntry>(new DataEntry(params[0], 0.0));
+		break;
+	case Operations::UnaryType::SET:
+		data = std::unique_ptr<DataEntry>(new DataEntry(params.begin(), params.end()));
 		break;
 	case Operations::UnaryType::INCREMENT:
 		std::for_each(data->begin(), data->end(), Operations::increment);

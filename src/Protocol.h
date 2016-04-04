@@ -5,7 +5,7 @@
 typedef std::string CorrelationID;
 typedef std::vector<double> OpParams;
 
-static const char *c_UnaryOps[] = {"ZEROS", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
+static const char *c_UnaryOps[] = {"ZEROS", "SET", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
 static const char *c_BinaryOps[] = {"ADD", "SUB", "MUL", "DIV", "COPY"};
 const std::string c_sWorker = "worker:";
 const std::string c_sCallback = "CALLBACK";
