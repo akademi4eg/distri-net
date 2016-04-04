@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Version.h"
 #include "IDataReader.h"
 #include "Operations.h"

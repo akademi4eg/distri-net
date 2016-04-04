@@ -70,14 +70,14 @@ std::string CTasksCreator::getUniqueCorrelationID()
 	return std::to_string(uid++);
 }
 
-void CTasksCreator::sendDependentRequest(
+CTasksCreator& CTasksCreator::sendDependentRequest(
 		std::unique_ptr<IRequest> request, const CorrelationID& corrID)
 {
-	sendRequest(applyDependencies(std::move(request)), corrID);
+	return sendRequest(applyDependencies(std::move(request)), corrID);
 }
 
 // TODO add a way to publish to callback queues
-void CTasksCreator::sendRequest(
+CTasksCreator& CTasksCreator::sendRequest(
 		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID)
 {
 	AMQP::Envelope env(request->toString());
@@ -105,6 +105,7 @@ void CTasksCreator::sendRequest(
 	Log(
 			"Sent message [" + env.correlationID() + "]: "
 					+ request->toPrettyString());
+	return *this;
 }
 
 std::unique_ptr<IRequest> CTasksCreator::applyDependencies(

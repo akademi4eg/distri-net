@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "CTasksCreator.h"
-#include "../Operations.h"
+#include "../RequestsFactory.h"
 #define Log(x) (std::cout << x << std::endl)
 
 int main(int argc, const char* argv[])
@@ -30,39 +30,16 @@ int main(int argc, const char* argv[])
 	key2.iIndex = 0;
 	key3.sSource = "datafile3";
 	key3.iIndex = 0;
-	int arSize = 3;
+	size_t arSize = 3;
 	manager.sendRequest(
-			std::unique_ptr<IRequest>(
-					new CUnaryOpRequest(key, Operations::UnaryType::SET,
-							OpParams{1, 2, 3})));
-	manager.sendRequest(
-			std::unique_ptr<IRequest>(
-					new CUnaryOpRequest(key2, Operations::UnaryType::ZEROS,
-							OpParams(1, arSize))));
-	manager.sendDependentRequest(
-					std::unique_ptr<IRequest>(
-							new CUnaryOpRequest(key,
-									Operations::UnaryType::DECREMENT)));
-	manager.sendDependentRequest(
-					std::unique_ptr<IRequest>(
-							new CUnaryOpRequest(key2,
-									Operations::UnaryType::INCREMENT)));
-	manager.sendDependentRequest(
-					std::unique_ptr<IRequest>(
-							new CBinaryOpRequest(key, key2,
-									Operations::BinaryType::ADD)));
-	manager.sendDependentRequest(
-					std::unique_ptr<IRequest>(
-							new CBinaryOpRequest(key3, key2,
-									Operations::BinaryType::COPY)));
-	manager.sendDependentRequest(
-					std::unique_ptr<IRequest>(
-							new CUnaryOpRequest(key2,
-									Operations::UnaryType::INCREMENT)));
-	manager.sendDependentRequest(
-					std::unique_ptr<IRequest>(
-							new CBinaryOpRequest(key, key2,
-									Operations::BinaryType::DIV)));
+		RequestsFactory::Set(key, OpParams{ 1, 2, 3 })).sendRequest(
+		RequestsFactory::Zeros(key2, arSize)).sendDependentRequest(
+		RequestsFactory::Dec(key)).sendDependentRequest(
+		RequestsFactory::Inc(key2)).sendDependentRequest(
+		RequestsFactory::Add(key, key2)).sendDependentRequest(
+		RequestsFactory::Copy(key3, key2)).sendDependentRequest(
+		RequestsFactory::Inc(key2)).sendDependentRequest(
+		RequestsFactory::Div(key, key2));
 	manager.run();
 	return 0;
 }

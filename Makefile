@@ -1,6 +1,6 @@
 CXX = g++
 INCLUDE = src
-CPPFLAGS = -Wall
+CPPFLAGS = -Wall -Wfatal-errors
 CXXFLAGS = -std=c++11 -g
 LDFLAGS = -lamqpcpp -lPocoFoundation -lPocoNet
 WORKER_BINARY = distnet_worker
