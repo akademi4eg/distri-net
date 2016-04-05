@@ -39,19 +39,19 @@ int main(int argc, const char* argv[])
 	{
 		if (line.substr(0, 2) == "//") // comment
 			continue;
-		std::istringstream iss(line);
+		std::istringstream issCmd(line);
 		std::string cmd;
-		iss >> cmd;
+		issCmd >> cmd;
 		size_t iSkip = cmd.size();
 		applyWordTrim(cmd);
 		if (cmd.empty()) // blank line
 			continue;
-		std::string args = iss.str().substr(iSkip);
-		iss = std::istringstream(args);
+		std::string args = issCmd.str().substr(iSkip);
+		std::istringstream issArgs = std::istringstream(args);
 		std::string curArg;
 		std::vector<SDataKey> operands;
 		OpParams params;
-		while (std::getline(iss, curArg, ','))
+		while (std::getline(issArgs, curArg, ','))
 		{
 			applyWordTrim(curArg);
 			if (!curArg.empty())
@@ -73,7 +73,7 @@ int main(int argc, const char* argv[])
 				else // number
 					params.push_back(atof(curArg.c_str()));
 			}
-			if (iss.eof())
+			if (issArgs.eof())
 				break;
 		}
 		UniqueRequest request = RequestsFactory::getFromString(cmd, operands, params);
@@ -83,6 +83,8 @@ int main(int argc, const char* argv[])
 			return 3;
 		}
 		manager.sendDependentRequest(std::move(request));
+		if (issCmd.eof())
+			break;
 	}
 	
 	infile.close();
