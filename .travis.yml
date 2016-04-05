@@ -9,8 +9,6 @@ before_install:
 - sudo apt-get install -qq libpoco*
 - sudo apt-get install -qq gcc-5 g++-5
 - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 60 --slave /usr/bin/g++ g++ /usr/bin/g++-5
-- sudo update-alternatives --set gcc /usr/bin/gcc-5
-- sudo upfate-alternatives --set g++ /usr/bin/g++-5
 - g++ --version
 install:
 - git clone https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
