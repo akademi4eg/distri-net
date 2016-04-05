@@ -1,10 +1,10 @@
 // Example 1.
-ZEROS a, 2
-SET b, -2, 3
-INCREMENT a
-COPY c, a
-ADD a, b
-DIV c, a
+ZEROS :a, 2
+SET :b, -2, 3
+INCREMENT :a
+COPY :c, :a
+ADD :a, :b
+DIV :c, :a
 
 // Expected output:
 // a = [-1, 4]

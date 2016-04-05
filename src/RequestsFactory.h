@@ -19,6 +19,7 @@ UniqueRequest getFromString(const std::string& req,
 			return UniqueRequest(
 				new CUnaryOpRequest(keys[0], (Operations::UnaryType)i, params));
 		}
+		i++;
 	}
 	i = 0;
 	while (keys.size()==2 && i < Operations::BinaryType::BINARY_UNSUPPORTED)
@@ -29,6 +30,7 @@ UniqueRequest getFromString(const std::string& req,
 			return UniqueRequest(
 				new CBinaryOpRequest(keys[0], keys[1], (Operations::BinaryType)i, params));
 		}
+		i++;
 	}
 	// some wrong request
 	return UniqueRequest(new CUnsupportedRequest());

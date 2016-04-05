@@ -50,7 +50,7 @@ public:
 	{
 		return c_sCallback + "\n" + waitFor + "\n" + callCorrelationID + "\n" + call->toString();
 	}
-	std::string toPrettyString()
+	std::string toPrettyString() const
 	{
 		return "[call " + callCorrelationID + " after " + waitFor + "]: " + call->toPrettyString();
 	}
@@ -165,6 +165,7 @@ class IResponse
 {
 public:
 	virtual std::string toString() const = 0;
+	virtual std::string toPrettyString() const {return toString();};
 
 	virtual ~IResponse(){};
 };
@@ -181,6 +182,7 @@ public:
 	std::string getDependency() const {return waitFor;}
 	std::string getCorrelationID() const {return correlationID;}
 	std::string toString() const {return call->toString();}
+	std::string toPrettyString() const {return call->toPrettyString();}
 };
 
 class CVersionResponse : public IResponse

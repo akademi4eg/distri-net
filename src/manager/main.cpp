@@ -8,6 +8,14 @@
 #include "../Version.h"
 #define Log(x) (std::cout << x << std::endl)
 
+void applyWordTrim(std::string& cmd)
+{
+	cmd.erase(cmd.find_last_not_of(" \t")+1);
+	size_t firstPos = cmd.find_first_not_of(" \t");
+	if (firstPos != std::string::npos)
+		cmd = cmd.substr(firstPos);
+}
+
 int main(int argc, const char* argv[])
 {
 	Log("Manager version "+c_sProductVersion);
@@ -34,7 +42,47 @@ int main(int argc, const char* argv[])
 		std::istringstream iss(line);
 		std::string cmd;
 		iss >> cmd;
-		Log(cmd);
+		size_t iSkip = cmd.size();
+		applyWordTrim(cmd);
+		if (cmd.empty()) // blank line
+			continue;
+		std::string args = iss.str().substr(iSkip);
+		iss = std::istringstream(args);
+		std::string curArg;
+		std::vector<SDataKey> operands;
+		OpParams params;
+		while (std::getline(iss, curArg, ','))
+		{
+			applyWordTrim(curArg);
+			if (!curArg.empty())
+			{
+				if (curArg[0] == ':')
+				{ // variable
+					std::map<std::string, SDataKey>::const_iterator curVar = vars.find(curArg);
+					if (curVar != vars.end())
+					{ // existing varible
+						operands.push_back(curVar->second);
+					}
+					else
+					{ // new variable
+						SDataKey key = CTasksCreator::getUniqueDatafile();
+						vars[curArg] = key;
+						operands.push_back(key);
+					}
+				}
+				else // number
+					params.push_back(atof(curArg.c_str()));
+			}
+			if (iss.eof())
+				break;
+		}
+		UniqueRequest request = RequestsFactory::getFromString(cmd, operands, params);
+		if (request->getType() == IRequest::Type::UNSUPPORTED)
+		{
+			Log("Error while parsing script.");
+			return 3;
+		}
+		manager.sendDependentRequest(std::move(request));
 	}
 	
 	infile.close();

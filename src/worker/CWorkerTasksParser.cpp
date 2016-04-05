@@ -47,7 +47,7 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             env.setReplyTo(message.replyTo());
             std::string callQueue = CCallbackRequest::formCallbackName(resp->getDependency());
             pChannel->publish("", callQueue, env);
-            Log("Sent callback to " + callQueue + ": " + resp->toString());
+            Log("Sent callback to " + callQueue + ": " + resp->toPrettyString());
         }
 
         if (!request->isReadOnly())
