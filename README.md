@@ -13,6 +13,8 @@ Working instance of RabbitMQ is required (version 3.3.0 or newer). Also shovel p
 rabbitmq-plugins enable rabbitmq_shovel
 ```
 
+Note that to build sources you'll need g++ version 5 or higher.
+
 ## Modules
 
 ### Manager
