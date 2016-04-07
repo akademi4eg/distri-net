@@ -35,6 +35,11 @@ UniqueRequest getFromString(const std::string& req,
 	// some wrong request
 	return UniqueRequest(new CUnsupportedRequest());
 }
+
+UniqueRequest If(const SDataKey& key, size_t idx, IRequest::Condition cond)
+{
+	return UniqueRequest(new CIfRequest(key, idx, cond));
+}
 	
 UniqueRequest Zeros(const SDataKey& key, size_t num)
 {

@@ -10,6 +10,7 @@ typedef std::vector<double> OpParams;
 static const char *c_UnaryOps[] = {"ZEROS", "SET", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
 static const char *c_BinaryOps[] = {"ADD", "SUB", "MUL", "DIV", "COPY"};
 const std::string c_sWorker = "worker:";
+const std::string c_sIf = "IF";
 const std::string c_sCallback = "CALLBACK";
 const std::string c_sUnaryOp = "UNARY_OP";
 const std::string c_sBinaryOp = "BINARY_OP";
@@ -17,11 +18,14 @@ const std::string c_sVersion = "VERSION";
 const std::string c_sExit = "EXIT";
 const std::string c_sUnsup = "UNSUPPORTED";
 const std::string c_sSuccess = "OK";
+const std::string c_sTrue = "TRUE";
+const std::string c_sFalse = "FALSE";
 
 class IRequest
 {
 public:
-	enum class Type {CALLBACK, UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
+	enum class Type {IF, CALLBACK, UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
+	enum Condition {COND_ZERO, COND_POS, COND_NEG};
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
 	virtual std::string toPrettyString() const {return toString();};
@@ -40,7 +44,7 @@ class CCallbackRequest : public IRequest
 	std::unique_ptr<IRequest> call;
 
 public:
-	static std::string formCallbackName(CorrelationID corrID) {return c_sCallback + "-" + corrID;}
+	static std::string formCallbackName(const CorrelationID& corrID, const std::string& prefix = c_sCallback) {return prefix + "-" + corrID;}
 
 	CCallbackRequest(const CorrelationID& correlationID, const CorrelationID& dependency,
 			std::unique_ptr<IRequest> req)
@@ -66,6 +70,31 @@ public:
 	std::unique_ptr<IRequest> getCall() {return std::move(call);}
 	bool isReadOnly() const {return true;};
 	std::vector<SDataKey> getAffectedData() const {return call->getAffectedData();};
+};
+
+class CIfRequest : public IRequest
+{
+	SDataKey key;
+	size_t iIndex;
+	Condition eCond;
+public:
+	CIfRequest(const SDataKey& akey, size_t idx,
+			Condition cond)
+		: key(akey), iIndex(idx), eCond(cond) {};
+	Type getType() const {return Type::IF;};
+	std::string toString() const
+	{
+		return c_sIf + "\n" + key.toString() + "\n" + std::to_string(iIndex) + "\n" + std::to_string(eCond);
+	};
+	std::string toPrettyString() const
+	{
+		return "Run IF for key " + key.toPrettyString() + "@" + std::to_string(iIndex);
+	};
+	bool isReadOnly() const {return true;};
+	SDataKey getKey() const {return key;};
+	size_t getIndex() const {return iIndex;};
+	Condition getCondition() const {return eCond;};
+	std::vector<SDataKey> getAffectedData() const {return std::vector<SDataKey>(1, key);}
 };
 
 class CUnaryOpRequest : public IRequest
@@ -168,6 +197,16 @@ public:
 	virtual std::string toPrettyString() const {return toString();};
 
 	virtual ~IResponse(){};
+};
+
+class CIfResponse : public IResponse
+{
+	bool predicate;
+public:
+	CIfResponse(bool pred) : predicate(pred) {};
+	virtual std::string toString() const {return predicate?c_sTrue:c_sFalse;};
+
+	bool getResult() const {return predicate;};
 };
 
 class CCallbackResponse : public IResponse

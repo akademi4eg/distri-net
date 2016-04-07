@@ -88,6 +88,15 @@ int main(int argc, const char* argv[])
 	}
 	
 	infile.close();
+
+	// special case for example 1 to test IF
+	CorrelationID ifID = "test-if";
+	manager.sendDependentRequest(RequestsFactory::If(vars[":c"], 1, IRequest::COND_POS), ifID)
+		   .saveContext()
+		   .sendDependentRequest(RequestsFactory::Inc(vars[":a"]), manager.getUniqueCorrelationID(),
+				   CCallbackRequest::formCallbackName(ifID, c_sTrue))
+		   .restoreContext();
+
 	manager.run();
 	return 0;
 }

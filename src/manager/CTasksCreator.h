@@ -4,6 +4,12 @@
 #include "../Protocol.h"
 #include <map>
 #include <list>
+#include <stack>
+
+typedef std::map<std::string, CorrelationID> DepsMap;
+
+const std::string c_sBatchExc = "batches_ops";
+const std::string c_sTaskRoutKey = "task";
 
 class CTasksCreator {
 	SimplePocoHandler *pConnectionHandler;
@@ -15,11 +21,10 @@ class CTasksCreator {
 	std::string AMQPVHost;
 
 	std::string sResponsesQueue;
-	std::string sBatchExc;
-	std::string sTaskRoutKey;
 
-	std::map<std::string, CorrelationID> dependencies;
+	DepsMap dependencies;
 	std::list<CorrelationID> requestsSent;
+	std::stack<DepsMap> depsStack;
 public:
 	CTasksCreator(const std::string& host, uint16_t port,
 			const AMQP::Login& login, const std::string& vhost);
@@ -27,10 +32,14 @@ public:
 
 	void run();
 	CTasksCreator& sendDependentRequest(std::unique_ptr<IRequest> request,
-			const CorrelationID& corrID = getUniqueCorrelationID());
+			const CorrelationID& corrID = getUniqueCorrelationID(),
+			const std::string& sendTo = c_sBatchExc);
 	CTasksCreator& sendRequest(std::unique_ptr<IRequest> const & request,
-			const CorrelationID& corrID = getUniqueCorrelationID());
+			const CorrelationID& corrID = getUniqueCorrelationID(),
+			const std::string& sendTo = c_sBatchExc);
 	std::unique_ptr<IRequest> applyDependencies(std::unique_ptr<IRequest> request);
+	CTasksCreator& saveContext() {depsStack.push(dependencies); return *this;};
+	CTasksCreator& restoreContext() {dependencies = depsStack.top(); depsStack.pop(); return *this;};
 
 	static std::string getUniqueCorrelationID();
 	static SDataKey getUniqueDatafile();

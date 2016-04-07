@@ -23,8 +23,6 @@ CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 
 	Log("Declaring responses queue.");
 	sResponsesQueue = "resp";
-	sBatchExc = "batches_ops";
-	sTaskRoutKey = "task";
 	pChannel->declareQueue(sResponsesQueue, AMQP::exclusive);
 
 	auto receiveCallback =
@@ -78,14 +76,15 @@ std::string CTasksCreator::getUniqueCorrelationID()
 }
 
 CTasksCreator& CTasksCreator::sendDependentRequest(
-		std::unique_ptr<IRequest> request, const CorrelationID& corrID)
+		std::unique_ptr<IRequest> request, const CorrelationID& corrID,
+		const std::string& sendTo)
 {
-	return sendRequest(applyDependencies(std::move(request)), corrID);
+	return sendRequest(applyDependencies(std::move(request)), corrID, sendTo);
 }
 
-// TODO add a way to publish to callback queues
 CTasksCreator& CTasksCreator::sendRequest(
-		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID)
+		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID,
+		const std::string& sendTo)
 {
 	AMQP::Envelope env(request->toString());
 	env.setCorrelationID(corrID);
@@ -108,10 +107,30 @@ CTasksCreator& CTasksCreator::sendRequest(
 			dependencies[key.toString()] = idForDependencies;
 		}
 	}
-	pChannel->publish(sBatchExc, sTaskRoutKey, env);
-	Log(
+	if (request->getType() == IRequest::Type::IF)
+	{
+		pChannel->declareQueue(
+					CCallbackRequest::formCallbackName(env.correlationID(), c_sTrue),
+					AMQP::durable);
+		pChannel->declareQueue(
+					CCallbackRequest::formCallbackName(env.correlationID(), c_sFalse),
+					AMQP::durable);
+	}
+	// TODO update this to use routine keys and exchanges
+	if (sendTo != c_sBatchExc)
+	{
+		pChannel->publish("", sendTo, env);
+		Log(
+			"Sent message [" + env.correlationID() + "] to " + sendTo + ": "
+					+ request->toPrettyString());
+	}
+	else
+	{
+		pChannel->publish(sendTo, c_sTaskRoutKey, env);
+		Log(
 			"Sent message [" + env.correlationID() + "]: "
 					+ request->toPrettyString());
+	}
 	return *this;
 }
 

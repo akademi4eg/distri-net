@@ -1,3 +1,4 @@
+#include "../RequestsFactory.h"
 #include "../Operations.h"
 #include "CWorkerTasksParser.h"
 #include <string>
@@ -49,10 +50,14 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
             pChannel->publish("", callQueue, env);
             Log("Sent callback to " + callQueue + ": " + resp->toPrettyString());
         }
+        else if (request->getType() == IRequest::Type::IF)
+        {
+        	CIfResponse *resp = reinterpret_cast<CIfResponse*>(response.get());
+        	allowCallbacksProcessing(message.correlationID(), resp->toString());
+        }
 
         if (!request->isReadOnly())
         {
-        	Log("Allowing execution of calls waiting for " + message.correlationID());
         	allowCallbacksProcessing(message.correlationID());
         }
         pChannel->ack(deliveryTag);
@@ -68,12 +73,13 @@ CWorkerTasksParser::~CWorkerTasksParser()
 	delete pConnectionHandler;
 }
 
-void CWorkerTasksParser::allowCallbacksProcessing(const CorrelationID& corrID)
+void CWorkerTasksParser::allowCallbacksProcessing(const CorrelationID& corrID, const std::string& prefix)
 {
 	std::string uri("amqp://"+AMQPCreds.user()+"@/%2f"+AMQPVHost.substr(1));
-	std::string srcQueue(CCallbackRequest::formCallbackName(corrID));
+	std::string srcQueue(CCallbackRequest::formCallbackName(corrID, prefix));
 	std::string apiCall("/api/parameters/shovel/%2f"+AMQPVHost.substr(1)+"/"+srcQueue);
 	std::string cmd("{\"value\": {\"src-uri\":  \""+uri+"\", \"src-queue\": \""+srcQueue+"\",\"dest-uri\": \""+uri+"\", \"dest-queue\": \"batches_tasks\"}}");
+	Log("Merging calls from " + srcQueue);
 	try
 	{
 		Poco::Net::HTTPBasicCredentials creds(AMQPCreds.user(), AMQPCreds.password());
@@ -143,6 +149,14 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 		return std::unique_ptr<IRequest>(new CCallbackRequest(correlationID, waitFor,
 				parseRequest(requestStr)));
 	}
+	else if (line == c_sIf)
+	{
+		SDataKey key;
+		size_t idx;
+		int cond;
+		msgStream >> key.sSource >> key.iIndex >> idx >> cond;
+		return RequestsFactory::If(key, idx, (IRequest::Condition)cond);
+	}
 	else if (line == c_sVersion)
 	{
 		return std::unique_ptr<IRequest>(new CVersionRequest());
@@ -165,6 +179,22 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 		return std::unique_ptr<IResponse>(new CCallbackResponse(callback->getDependency(),
 				callback->getCorrelationID(), std::move(callback->getCall())));
 	}
+	case IRequest::Type::IF:
+	{
+		CIfRequest *ifReq = reinterpret_cast<CIfRequest*>(request.get());
+		std::unique_ptr<DataEntry> data = fileReader.loadData(ifReq->getKey());
+		if (!data || data->size() < ifReq->getIndex())
+			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to evaluate if predicate."));
+		switch (ifReq->getCondition())
+		{
+		case IRequest::Condition::COND_ZERO:
+			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())==0));
+		case IRequest::Condition::COND_POS:
+			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())>0));
+		case IRequest::Condition::COND_NEG:
+			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())<0));
+		}
+	}
 	case IRequest::Type::UNARY_OP:
 	{
 		CUnaryOpRequest *unaryOp = reinterpret_cast<CUnaryOpRequest*>(request.get());
@@ -180,7 +210,7 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 				binaryOp->getOp(), binaryOp->getParams()))
 			return std::unique_ptr<IResponse>(new CSuccessResponse());
 		else
-			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply unary operation."));
+			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to apply binary operation."));
 	}
 	case IRequest::Type::EXIT:
 		pConnectionHandler->quit();
