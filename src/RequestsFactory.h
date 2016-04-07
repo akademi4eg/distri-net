@@ -40,6 +40,11 @@ UniqueRequest If(const SDataKey& key, size_t idx, IRequest::Condition cond)
 {
 	return UniqueRequest(new CIfRequest(key, idx, cond));
 }
+
+UniqueRequest EndIf(const CorrelationID& corrID)
+{
+	return UniqueRequest(new CEndIfRequest(corrID));
+}
 	
 UniqueRequest Zeros(const SDataKey& key, size_t num)
 {

@@ -25,6 +25,9 @@ public:
 
     bool connected() const;
 
+    static void removeShovel(const std::string& shovel, const std::string& host,
+    		const std::string& vhost, const std::string& user, const std::string& pwd);
+
 private:
 
     SimplePocoHandler(const SimplePocoHandler&) = delete;

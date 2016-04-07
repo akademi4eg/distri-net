@@ -1,11 +1,6 @@
 #include <cstdlib>
 
 #include "CTasksCreator.h"
-#include <Poco/Net/HTTPClientSession.h>
-#include <Poco/Net/HTTPRequest.h>
-#include <Poco/Net/HTTPResponse.h>
-#include <Poco/Exception.h>
-#include <Poco/Net/HTTPBasicCredentials.h>
 
 #define Log(x) (std::cout << x << std::endl)
 const std::string c_sDatafilePrefix = "datafile-";
@@ -197,24 +192,7 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 void CTasksCreator::clearRequest(const CorrelationID& corrID)
 {
 	std::string srcQueue(CCallbackRequest::formCallbackName(corrID));
-	std::string apiCall("/api/parameters/shovel/%2f"+AMQPVHost.substr(1)+"/"+srcQueue);
-	try
-	{
-		Poco::Net::HTTPBasicCredentials creds(AMQPCreds.user(), AMQPCreds.password());
-		Poco::Net::HTTPClientSession session(AMQPHost, c_iHTTPRabbitPort);
-		Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_DELETE, apiCall);
-		creds.authenticate(request);
-		session.sendRequest(request);
-		Poco::Net::HTTPResponse response;
-		std::istream& is = session.receiveResponse(response);
-		std::string line;
-		while (!is.eof())
-			is >> line;
-	}
-    catch (Poco::Exception &ex)
-    {
-        Log("Failed to remove callback for " + corrID + ": " + ex.displayText());
-    }
+	SimplePocoHandler::removeShovel(srcQueue, AMQPHost, AMQPVHost, AMQPCreds.user(), AMQPCreds.password());
 	pChannel->removeQueue(srcQueue).onSuccess([&](int){
 		// if there are no request left, quit
 		if (requestsSent.empty())

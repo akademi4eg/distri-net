@@ -11,6 +11,7 @@ static const char *c_UnaryOps[] = {"ZEROS", "SET", "INCREMENT", "DECREMENT", "FL
 static const char *c_BinaryOps[] = {"ADD", "SUB", "MUL", "DIV", "COPY"};
 const std::string c_sWorker = "worker:";
 const std::string c_sIf = "IF";
+const std::string c_sEndIf = "ENDIF";
 const std::string c_sCallback = "CALLBACK";
 const std::string c_sUnaryOp = "UNARY_OP";
 const std::string c_sBinaryOp = "BINARY_OP";
@@ -24,7 +25,7 @@ const std::string c_sFalse = "FALSE";
 class IRequest
 {
 public:
-	enum class Type {IF, CALLBACK, UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
+	enum class Type {IF, ENDIF, CALLBACK, UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
 	enum Condition {COND_ZERO, COND_POS, COND_NEG};
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
@@ -70,6 +71,18 @@ public:
 	std::unique_ptr<IRequest> getCall() {return std::move(call);}
 	bool isReadOnly() const {return true;};
 	std::vector<SDataKey> getAffectedData() const {return call->getAffectedData();};
+};
+
+class CEndIfRequest : public IRequest
+{
+	CorrelationID ifCorr;
+public:
+	CEndIfRequest(CorrelationID corrID) : ifCorr(corrID) {};
+	CorrelationID getBlockCorrelationID() {return ifCorr;};
+	Type getType() const {return Type::ENDIF;};
+	std::string toString() const {return c_sEndIf + "\n" + ifCorr;};
+	std::string toPrettyString() const {return "End IF for " + ifCorr;};
+	bool isReadOnly() const {return true;};
 };
 
 class CIfRequest : public IRequest
@@ -207,6 +220,16 @@ public:
 	virtual std::string toString() const {return predicate?c_sTrue:c_sFalse;};
 
 	bool getResult() const {return predicate;};
+};
+
+class CEndIfResponse : public IResponse
+{
+	CorrelationID ifCorr;
+public:
+	CEndIfResponse(const CorrelationID& corrID) : ifCorr(corrID) {};
+	virtual std::string toString() const {return ifCorr;};
+
+	CorrelationID getBlockCorrelationID() const {return ifCorr;};
 };
 
 class CCallbackResponse : public IResponse

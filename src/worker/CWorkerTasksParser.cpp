@@ -55,6 +55,12 @@ CWorkerTasksParser::CWorkerTasksParser(const std::string& host, uint16_t port,
         	CIfResponse *resp = reinterpret_cast<CIfResponse*>(response.get());
         	allowCallbacksProcessing(message.correlationID(), resp->toString());
         }
+        else if (request->getType() == IRequest::Type::ENDIF)
+        {
+        	CEndIfResponse *resp = reinterpret_cast<CEndIfResponse*>(response.get());
+        	clearRequest(resp->getBlockCorrelationID(), c_sTrue);
+        	clearRequest(resp->getBlockCorrelationID(), c_sFalse);
+        }
 
         if (!request->isReadOnly())
         {
@@ -71,6 +77,13 @@ CWorkerTasksParser::~CWorkerTasksParser()
 	delete pChannel;
 	delete pConnection;
 	delete pConnectionHandler;
+}
+
+void CWorkerTasksParser::clearRequest(const CorrelationID& corrID, const std::string& prefix)
+{
+	std::string srcQueue(CCallbackRequest::formCallbackName(corrID, prefix));
+	SimplePocoHandler::removeShovel(srcQueue, AMQPHost, AMQPVHost, AMQPCreds.user(), AMQPCreds.password());
+	pChannel->removeQueue(srcQueue);
 }
 
 void CWorkerTasksParser::allowCallbacksProcessing(const CorrelationID& corrID, const std::string& prefix)
@@ -157,6 +170,12 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 		msgStream >> key.sSource >> key.iIndex >> idx >> cond;
 		return RequestsFactory::If(key, idx, (IRequest::Condition)cond);
 	}
+	else if (line == c_sEndIf)
+	{
+		CorrelationID corrID;
+		msgStream >> corrID;
+		return RequestsFactory::EndIf(corrID);
+	}
 	else if (line == c_sVersion)
 	{
 		return std::unique_ptr<IRequest>(new CVersionRequest());
@@ -194,6 +213,11 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 		case IRequest::Condition::COND_NEG:
 			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())<0));
 		}
+	}
+	case IRequest::Type::ENDIF:
+	{
+		CEndIfRequest *ifReq = reinterpret_cast<CEndIfRequest*>(request.get());
+		return std::unique_ptr<IResponse>(new CEndIfResponse(ifReq->getBlockCorrelationID()));
 	}
 	case IRequest::Type::UNARY_OP:
 	{

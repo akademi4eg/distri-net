@@ -5,8 +5,37 @@
 #include <cassert>
 #include <iostream>
 #include <Poco/Net/StreamSocket.h>
+#include <Poco/Net/HTTPClientSession.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/Exception.h>
+#include <Poco/Net/HTTPBasicCredentials.h>
 
 #include "SimplePocoHandler.h"
+
+void SimplePocoHandler::removeShovel(const std::string& shovel, const std::string& host,
+		const std::string& vhost, const std::string& user, const std::string& pwd)
+{
+	std::string apiCall("/api/parameters/shovel/%2f"+vhost.substr(1)+"/"+shovel);
+	try
+	{
+		Poco::Net::HTTPBasicCredentials creds(user, pwd);
+		Poco::Net::HTTPClientSession session(host, c_iHTTPRabbitPort);
+		Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_DELETE, apiCall);
+		creds.authenticate(request);
+		session.sendRequest(request);
+		Poco::Net::HTTPResponse response;
+		std::istream& is = session.receiveResponse(response);
+		std::string line;
+		while (!is.eof())
+			is >> line;
+	}
+    catch (Poco::Exception &ex)
+    {
+    	// TODO add logging
+        std::cerr << "Failed to remove shovel " + shovel + ": " + ex.displayText();
+    }
+}
 
 namespace
 {

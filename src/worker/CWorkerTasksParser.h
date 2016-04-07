@@ -30,4 +30,5 @@ public:
 
 private:
 	void allowCallbacksProcessing(const CorrelationID& corrID, const std::string& prefix = c_sCallback);
+	void clearRequest(const CorrelationID& corrID, const std::string& prefix = c_sCallback);
 };

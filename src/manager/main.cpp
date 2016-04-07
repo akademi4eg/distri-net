@@ -95,6 +95,8 @@ int main(int argc, const char* argv[])
 		   .saveContext()
 		   .sendDependentRequest(RequestsFactory::Inc(vars[":a"]), manager.getUniqueCorrelationID(),
 				   CCallbackRequest::formCallbackName(ifID, c_sTrue))
+		   .sendDependentRequest(RequestsFactory::EndIf(ifID), manager.getUniqueCorrelationID(),
+				   CCallbackRequest::formCallbackName(ifID, c_sTrue))
 		   .restoreContext();
 
 	manager.run();
