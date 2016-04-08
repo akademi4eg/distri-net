@@ -7,36 +7,7 @@ typedef std::unique_ptr<IRequest> UniqueRequest;
 
 namespace RequestsFactory
 {
-UniqueRequest getFromString(const std::string& req,
-				std::vector<SDataKey> keys, const OpParams& params)
-{
-	int i = 0;
-	while (keys.size()==1 && i < Operations::UnaryType::UNARY_UNSUPPORTED)
-	{
-		if (req == c_UnaryOps[i])
-		{
-			// it is an unary operation
-			return UniqueRequest(
-				new CUnaryOpRequest(keys[0], (Operations::UnaryType)i, params));
-		}
-		i++;
-	}
-	i = 0;
-	while (keys.size()==2 && i < Operations::BinaryType::BINARY_UNSUPPORTED)
-	{
-		if (req == c_BinaryOps[i])
-		{
-			// it is a binary operation
-			return UniqueRequest(
-				new CBinaryOpRequest(keys[0], keys[1], (Operations::BinaryType)i, params));
-		}
-		i++;
-	}
-	// some wrong request
-	return UniqueRequest(new CUnsupportedRequest());
-}
-
-UniqueRequest If(const SDataKey& key, size_t idx, IRequest::Condition cond)
+UniqueRequest If(const SDataKey& key, size_t idx, Operations::Condition cond)
 {
 	return UniqueRequest(new CIfRequest(key, idx, cond));
 }
@@ -101,5 +72,44 @@ UniqueRequest Copy(const SDataKey& keyBase, const SDataKey& keyOther)
 {
 	return UniqueRequest(new CBinaryOpRequest(keyBase, keyOther,
 			Operations::BinaryType::COPY));
+}
+
+UniqueRequest getFromString(const std::string& req,
+				std::vector<SDataKey> keys, const OpParams& params)
+{
+	int i = 0;
+	while (keys.size()==1 && i < Operations::UnaryType::UNARY_UNSUPPORTED)
+	{
+		if (req == c_UnaryOps[i])
+		{
+			// it is an unary operation
+			return UniqueRequest(
+				new CUnaryOpRequest(keys[0], (Operations::UnaryType)i, params));
+		}
+		i++;
+	}
+	i = 0;
+	while (keys.size()==2 && i < Operations::BinaryType::BINARY_UNSUPPORTED)
+	{
+		if (req == c_BinaryOps[i])
+		{
+			// it is a binary operation
+			return UniqueRequest(
+				new CBinaryOpRequest(keys[0], keys[1], (Operations::BinaryType)i, params));
+		}
+		i++;
+	}
+	i = 0;
+	while (keys.size()==1 && i < Operations::Condition::COND_UNSUPPORTED)
+	{
+		if (req == c_Ifs[i])
+		{
+			// it is if block
+			return If(keys[0], params[0], (Operations::Condition)i);
+		}
+		i++;
+	}
+	// some wrong request
+	return UniqueRequest(new CUnsupportedRequest());
 }
 }

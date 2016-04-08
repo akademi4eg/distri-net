@@ -7,6 +7,7 @@
 typedef std::string CorrelationID;
 typedef std::vector<double> OpParams;
 
+static const char *c_Ifs[] = {"IFZ", "IFPOS", "IFNEG"};
 static const char *c_UnaryOps[] = {"ZEROS", "SET", "INCREMENT", "DECREMENT", "FLIP_SIGN"};
 static const char *c_BinaryOps[] = {"ADD", "SUB", "MUL", "DIV", "COPY"};
 const std::string c_sWorker = "worker:";
@@ -26,7 +27,6 @@ class IRequest
 {
 public:
 	enum class Type {IF, ENDIF, CALLBACK, UNARY_OP, BINARY_OP, VERSION, EXIT, UNSUPPORTED};
-	enum Condition {COND_ZERO, COND_POS, COND_NEG};
 	virtual Type getType() const = 0;
 	virtual std::string toString() const = 0;
 	virtual std::string toPrettyString() const {return toString();};
@@ -89,10 +89,10 @@ class CIfRequest : public IRequest
 {
 	SDataKey key;
 	size_t iIndex;
-	Condition eCond;
+	Operations::Condition eCond;
 public:
 	CIfRequest(const SDataKey& akey, size_t idx,
-			Condition cond)
+			Operations::Condition cond)
 		: key(akey), iIndex(idx), eCond(cond) {};
 	Type getType() const {return Type::IF;};
 	std::string toString() const
@@ -101,12 +101,12 @@ public:
 	};
 	std::string toPrettyString() const
 	{
-		return "Run IF for key " + key.toPrettyString() + "@" + std::to_string(iIndex);
+		return "Run "+ std::string(c_Ifs[eCond]) +" for key " + key.toPrettyString() + "@" + std::to_string(iIndex);
 	};
 	bool isReadOnly() const {return true;};
 	SDataKey getKey() const {return key;};
 	size_t getIndex() const {return iIndex;};
-	Condition getCondition() const {return eCond;};
+	Operations::Condition getCondition() const {return eCond;};
 	std::vector<SDataKey> getAffectedData() const {return std::vector<SDataKey>(1, key);}
 };
 

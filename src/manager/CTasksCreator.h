@@ -32,14 +32,15 @@ public:
 
 	void run();
 	CTasksCreator& sendDependentRequest(std::unique_ptr<IRequest> request,
-			const CorrelationID& corrID = getUniqueCorrelationID(),
-			const std::string& sendTo = c_sBatchExc);
+			const std::string& sendTo = c_sBatchExc,
+			const CorrelationID& corrID = getUniqueCorrelationID());
 	CTasksCreator& sendRequest(std::unique_ptr<IRequest> const & request,
-			const CorrelationID& corrID = getUniqueCorrelationID(),
-			const std::string& sendTo = c_sBatchExc);
+			const std::string& sendTo = c_sBatchExc,
+			const CorrelationID& corrID = getUniqueCorrelationID());
 	std::unique_ptr<IRequest> applyDependencies(std::unique_ptr<IRequest> request);
-	CTasksCreator& saveContext() {depsStack.push(dependencies); return *this;};
-	CTasksCreator& restoreContext() {dependencies = depsStack.top(); depsStack.pop(); return *this;};
+	CTasksCreator& saveContext();
+	CTasksCreator& restoreContext();
+	const CorrelationID& getLastParentCall() const {return requestsSent.back();};
 
 	static std::string getUniqueCorrelationID();
 	static SDataKey getUniqueDatafile();

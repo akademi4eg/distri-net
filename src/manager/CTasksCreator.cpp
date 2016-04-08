@@ -71,15 +71,14 @@ std::string CTasksCreator::getUniqueCorrelationID()
 }
 
 CTasksCreator& CTasksCreator::sendDependentRequest(
-		std::unique_ptr<IRequest> request, const CorrelationID& corrID,
-		const std::string& sendTo)
+		std::unique_ptr<IRequest> request, const std::string& sendTo,
+		const CorrelationID& corrID)
 {
-	return sendRequest(applyDependencies(std::move(request)), corrID, sendTo);
+	return sendRequest(applyDependencies(std::move(request)), sendTo, corrID);
 }
 
 CTasksCreator& CTasksCreator::sendRequest(
-		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID,
-		const std::string& sendTo)
+		std::unique_ptr<IRequest> const & request, const std::string& sendTo, const CorrelationID& corrID)
 {
 	AMQP::Envelope env(request->toString());
 	env.setCorrelationID(corrID);
@@ -102,18 +101,10 @@ CTasksCreator& CTasksCreator::sendRequest(
 			dependencies[key.toString()] = idForDependencies;
 		}
 	}
-	if (request->getType() == IRequest::Type::IF)
-	{
-		pChannel->declareQueue(
-					CCallbackRequest::formCallbackName(env.correlationID(), c_sTrue),
-					AMQP::durable);
-		pChannel->declareQueue(
-					CCallbackRequest::formCallbackName(env.correlationID(), c_sFalse),
-					AMQP::durable);
-	}
 	// TODO update this to use routine keys and exchanges
 	if (sendTo != c_sBatchExc)
 	{
+		pChannel->declareQueue(sendTo, AMQP::durable);
 		pChannel->publish("", sendTo, env);
 		Log(
 			"Sent message [" + env.correlationID() + "] to " + sendTo + ": "
@@ -134,6 +125,20 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 {
 	switch (request->getType())
 	{
+	case IRequest::Type::IF:
+	{
+		CIfRequest *curReq =
+				reinterpret_cast<CIfRequest*>(request.get());
+		std::map<std::string, CorrelationID>::const_iterator dependsOn =
+				dependencies.find(curReq->getKey().toString());
+		if (dependsOn != dependencies.end())
+		{
+			return std::unique_ptr<IRequest>(
+					new CCallbackRequest(getUniqueCorrelationID(),
+							dependsOn->second, std::move(request)));
+		}
+		break;
+	}
 	case IRequest::Type::UNARY_OP:
 	{
 		CUnaryOpRequest *curReq =
@@ -198,4 +203,18 @@ void CTasksCreator::clearRequest(const CorrelationID& corrID)
 		if (requestsSent.empty())
 			pConnection->close();
 	});
+}
+
+CTasksCreator& CTasksCreator::saveContext()
+{
+	depsStack.push(dependencies);
+	return *this;
+}
+
+
+CTasksCreator& CTasksCreator::restoreContext()
+{
+	dependencies = depsStack.top();
+	depsStack.pop();
+	return *this;
 }

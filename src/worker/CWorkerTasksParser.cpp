@@ -168,7 +168,7 @@ std::unique_ptr<IRequest> CWorkerTasksParser::parseRequest(const std::string& ms
 		size_t idx;
 		int cond;
 		msgStream >> key.sSource >> key.iIndex >> idx >> cond;
-		return RequestsFactory::If(key, idx, (IRequest::Condition)cond);
+		return RequestsFactory::If(key, idx, (Operations::Condition)cond);
 	}
 	else if (line == c_sEndIf)
 	{
@@ -206,12 +206,14 @@ std::unique_ptr<IResponse> CWorkerTasksParser::processRequest(std::unique_ptr<IR
 			return std::unique_ptr<IResponse>(new CErrorResponse("Failed to evaluate if predicate."));
 		switch (ifReq->getCondition())
 		{
-		case IRequest::Condition::COND_ZERO:
+		case Operations::Condition::COND_ZERO:
 			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())==0));
-		case IRequest::Condition::COND_POS:
+		case Operations::Condition::COND_POS:
 			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())>0));
-		case IRequest::Condition::COND_NEG:
+		case Operations::Condition::COND_NEG:
 			return std::unique_ptr<IResponse>(new CIfResponse(data->at(ifReq->getIndex())<0));
+		default:
+			return std::unique_ptr<IResponse>(new CErrorResponse("Unknown if condition."));
 		}
 	}
 	case IRequest::Type::ENDIF:

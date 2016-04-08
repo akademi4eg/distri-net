@@ -35,6 +35,8 @@ int main(int argc, const char* argv[])
 	
 	std::string line;
 	std::map<std::string, SDataKey> vars;
+	std::string currQueue = c_sBatchExc;
+	CorrelationID currParentCall;
 	while (std::getline(infile, line))
 	{
 		if (line.substr(0, 2) == "//") // comment
@@ -42,16 +44,13 @@ int main(int argc, const char* argv[])
 		std::istringstream issCmd(line);
 		std::string cmd;
 		issCmd >> cmd;
-		size_t iSkip = cmd.size();
 		applyWordTrim(cmd);
 		if (cmd.empty()) // blank line
 			continue;
-		std::string args = issCmd.str().substr(iSkip);
-		std::istringstream issArgs = std::istringstream(args);
 		std::string curArg;
 		std::vector<SDataKey> operands;
 		OpParams params;
-		while (std::getline(issArgs, curArg, ','))
+		while (std::getline(issCmd, curArg, ','))
 		{
 			applyWordTrim(curArg);
 			if (!curArg.empty())
@@ -73,31 +72,37 @@ int main(int argc, const char* argv[])
 				else // number
 					params.push_back(atof(curArg.c_str()));
 			}
-			if (issArgs.eof())
+			if (issCmd.eof())
 				break;
 		}
 		UniqueRequest request = RequestsFactory::getFromString(cmd, operands, params);
-		if (request->getType() == IRequest::Type::UNSUPPORTED)
+		if (request->getType() == IRequest::Type::IF)
+		{
+			manager.sendDependentRequest(std::move(request), currQueue);
+			currParentCall = manager.getLastParentCall();
+			currQueue = CCallbackRequest::formCallbackName(currParentCall, c_sTrue);
+			manager.saveContext();
+		}
+		else if (cmd == c_sEndIf)
+		{
+			manager.sendRequest(RequestsFactory::EndIf(currParentCall), currQueue);
+			manager.restoreContext();
+			currQueue = c_sBatchExc;
+		}
+		else if (request->getType() == IRequest::Type::UNSUPPORTED)
 		{
 			Log("Error while parsing script.");
 			return 3;
 		}
-		manager.sendDependentRequest(std::move(request));
-		if (issCmd.eof())
+		else
+		{
+			manager.sendDependentRequest(std::move(request), currQueue);
+		}
+		if (infile.eof())
 			break;
 	}
 	
 	infile.close();
-
-	// special case for example 1 to test IF
-	CorrelationID ifID = "test-if";
-	manager.sendDependentRequest(RequestsFactory::If(vars[":c"], 1, IRequest::COND_POS), ifID)
-		   .saveContext()
-		   .sendDependentRequest(RequestsFactory::Inc(vars[":a"]), manager.getUniqueCorrelationID(),
-				   CCallbackRequest::formCallbackName(ifID, c_sTrue))
-		   .sendDependentRequest(RequestsFactory::EndIf(ifID), manager.getUniqueCorrelationID(),
-				   CCallbackRequest::formCallbackName(ifID, c_sTrue))
-		   .restoreContext();
 
 	manager.run();
 	return 0;

@@ -10,6 +10,10 @@ enum BinaryType
 {
 	ADD, SUB, MUL, DIV, COPY, BINARY_UNSUPPORTED
 };
+enum Condition
+{
+	COND_ZERO, COND_POS, COND_NEG, COND_UNSUPPORTED
+};
 
 void increment(double& val);
 void decrement(double& val);
