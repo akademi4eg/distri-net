@@ -130,8 +130,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 	{
 		CIfRequest *curReq =
 				reinterpret_cast<CIfRequest*>(request.get());
-		std::map<std::string, CorrelationID>::const_iterator dependsOn =
-				context.dependencies.find(curReq->getKey().toString());
+		DepsMap::const_iterator dependsOn =
+				findDependency(curReq->getKey().toString());
 		if (dependsOn != context.dependencies.end())
 		{
 			return std::unique_ptr<IRequest>(
@@ -144,8 +144,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 	{
 		CUnaryOpRequest *curReq =
 				reinterpret_cast<CUnaryOpRequest*>(request.get());
-		std::map<std::string, CorrelationID>::const_iterator dependsOn =
-				context.dependencies.find(curReq->getKey().toString());
+		DepsMap::const_iterator dependsOn =
+				findDependency(curReq->getKey().toString());
 		if (dependsOn != context.dependencies.end())
 		{
 			return std::unique_ptr<IRequest>(
@@ -159,8 +159,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		std::unique_ptr<IRequest> result;
 		CBinaryOpRequest *curReq =
 				reinterpret_cast<CBinaryOpRequest*>(request.get());
-		std::map<std::string, CorrelationID>::const_iterator dependsOn =
-				context.dependencies.find(curReq->getBaseKey().toString());
+		DepsMap::const_iterator dependsOn =
+				findDependency(curReq->getBaseKey().toString());
 		if (dependsOn != context.dependencies.end())
 		{
 			result = std::unique_ptr<IRequest>(
@@ -170,7 +170,7 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		else
 			result = std::move(request);
 
-		dependsOn = context.dependencies.find(curReq->getOtherKey().toString());
+		dependsOn = findDependency(curReq->getOtherKey().toString());
 		if (dependsOn != context.dependencies.end())
 		{
 			result = std::unique_ptr<IRequest>(
@@ -209,6 +209,7 @@ void CTasksCreator::clearRequest(const CorrelationID& corrID)
 CTasksCreator& CTasksCreator::saveContext()
 {
 	appStack.push(context);
+	context.dependencies.clear();
 	return *this;
 }
 
@@ -219,4 +220,22 @@ CTasksCreator& CTasksCreator::restoreContext(bool doPop)
 	if (doPop)
 		appStack.pop();
 	return *this;
+}
+
+DepsMap::const_iterator CTasksCreator::findDependency(const std::string& varName) const
+{
+	DepsMap::const_iterator dep = context.dependencies.find(varName);
+	if (dep != context.dependencies.end())
+		return dep;
+
+	std::stack<SContext> curStack(appStack);
+	while (!curStack.empty())
+	{
+		dep = curStack.top().dependencies.find(varName);
+		if (dep != curStack.top().dependencies.end())
+				return dep;
+		curStack.pop();
+	}
+
+	return context.dependencies.end();
 }

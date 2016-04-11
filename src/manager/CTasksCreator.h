@@ -42,6 +42,7 @@ public:
 	CTasksCreator& sendRequest(std::unique_ptr<IRequest> const & request,
 			const CorrelationID& corrID = getUniqueCorrelationID());
 	std::unique_ptr<IRequest> applyDependencies(std::unique_ptr<IRequest> request);
+	DepsMap::const_iterator findDependency(const std::string& varName) const;
 	CTasksCreator& saveContext();
 	CTasksCreator& restoreContext(bool doPop = true);
 	CTasksCreator& setCurrentQueue(const std::string& queue = c_sBatchExc) {context.currQueue = queue; return *this;};

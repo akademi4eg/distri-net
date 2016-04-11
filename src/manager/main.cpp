@@ -84,14 +84,16 @@ int main(int argc, const char* argv[])
 		}
 		else if (cmd == c_sElse)
 		{
-			manager.sendRequest(RequestsFactory::EndIf(currParentCall))
+			manager.sendRequest(RequestsFactory::EndIf(currParentCall),
+						CCallbackRequest::formCallbackName(currParentCall, c_sEndIf))
 			 	   .restoreContext(false)
 				   .setCurrentQueue(CCallbackRequest::formCallbackName(currParentCall, c_sFalse))
 				   .saveContext();
 		}
 		else if (cmd == c_sEndIf)
 		{
-			manager.sendRequest(RequestsFactory::EndIf(currParentCall))
+			manager.sendRequest(RequestsFactory::EndIf(currParentCall),
+						CCallbackRequest::formCallbackName(currParentCall, c_sEndIf))
 				   .restoreContext();
 		}
 		else if (request->getType() == IRequest::Type::UNSUPPORTED)
