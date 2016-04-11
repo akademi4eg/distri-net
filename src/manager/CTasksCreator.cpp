@@ -19,6 +19,7 @@ CTasksCreator::CTasksCreator(const std::string& host, uint16_t port,
 	Log("Declaring responses queue.");
 	sResponsesQueue = "resp";
 	pChannel->declareQueue(sResponsesQueue, AMQP::exclusive);
+	context.currQueue = c_sBatchExc;
 
 	auto receiveCallback =
 			[&](const AMQP::Message &message,
@@ -71,14 +72,14 @@ std::string CTasksCreator::getUniqueCorrelationID()
 }
 
 CTasksCreator& CTasksCreator::sendDependentRequest(
-		std::unique_ptr<IRequest> request, const std::string& sendTo,
+		std::unique_ptr<IRequest> request,
 		const CorrelationID& corrID)
 {
-	return sendRequest(applyDependencies(std::move(request)), sendTo, corrID);
+	return sendRequest(applyDependencies(std::move(request)), corrID);
 }
 
 CTasksCreator& CTasksCreator::sendRequest(
-		std::unique_ptr<IRequest> const & request, const std::string& sendTo, const CorrelationID& corrID)
+		std::unique_ptr<IRequest> const & request, const CorrelationID& corrID)
 {
 	AMQP::Envelope env(request->toString());
 	env.setCorrelationID(corrID);
@@ -98,21 +99,21 @@ CTasksCreator& CTasksCreator::sendRequest(
 		requestsSent.push_back(idForDependencies);
 		for (const SDataKey& key : affectedData)
 		{
-			dependencies[key.toString()] = idForDependencies;
+			context.dependencies[key.toString()] = idForDependencies;
 		}
 	}
 	// TODO update this to use routine keys and exchanges
-	if (sendTo != c_sBatchExc)
+	if (context.currQueue != c_sBatchExc)
 	{
-		pChannel->declareQueue(sendTo, AMQP::durable);
-		pChannel->publish("", sendTo, env);
+		pChannel->declareQueue(context.currQueue, AMQP::durable);
+		pChannel->publish("", context.currQueue, env);
 		Log(
-			"Sent message [" + env.correlationID() + "] to " + sendTo + ": "
+			"Sent message [" + env.correlationID() + "] to " + context.currQueue + ": "
 					+ request->toPrettyString());
 	}
 	else
 	{
-		pChannel->publish(sendTo, c_sTaskRoutKey, env);
+		pChannel->publish(context.currQueue, c_sTaskRoutKey, env);
 		Log(
 			"Sent message [" + env.correlationID() + "]: "
 					+ request->toPrettyString());
@@ -130,8 +131,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		CIfRequest *curReq =
 				reinterpret_cast<CIfRequest*>(request.get());
 		std::map<std::string, CorrelationID>::const_iterator dependsOn =
-				dependencies.find(curReq->getKey().toString());
-		if (dependsOn != dependencies.end())
+				context.dependencies.find(curReq->getKey().toString());
+		if (dependsOn != context.dependencies.end())
 		{
 			return std::unique_ptr<IRequest>(
 					new CCallbackRequest(getUniqueCorrelationID(),
@@ -144,8 +145,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		CUnaryOpRequest *curReq =
 				reinterpret_cast<CUnaryOpRequest*>(request.get());
 		std::map<std::string, CorrelationID>::const_iterator dependsOn =
-				dependencies.find(curReq->getKey().toString());
-		if (dependsOn != dependencies.end())
+				context.dependencies.find(curReq->getKey().toString());
+		if (dependsOn != context.dependencies.end())
 		{
 			return std::unique_ptr<IRequest>(
 					new CCallbackRequest(getUniqueCorrelationID(),
@@ -159,8 +160,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		CBinaryOpRequest *curReq =
 				reinterpret_cast<CBinaryOpRequest*>(request.get());
 		std::map<std::string, CorrelationID>::const_iterator dependsOn =
-				dependencies.find(curReq->getBaseKey().toString());
-		if (dependsOn != dependencies.end())
+				context.dependencies.find(curReq->getBaseKey().toString());
+		if (dependsOn != context.dependencies.end())
 		{
 			result = std::unique_ptr<IRequest>(
 					new CCallbackRequest(getUniqueCorrelationID(),
@@ -169,8 +170,8 @@ std::unique_ptr<IRequest> CTasksCreator::applyDependencies(
 		else
 			result = std::move(request);
 
-		dependsOn = dependencies.find(curReq->getOtherKey().toString());
-		if (dependsOn != dependencies.end())
+		dependsOn = context.dependencies.find(curReq->getOtherKey().toString());
+		if (dependsOn != context.dependencies.end())
 		{
 			result = std::unique_ptr<IRequest>(
 					new CCallbackRequest(getUniqueCorrelationID(),
@@ -207,14 +208,15 @@ void CTasksCreator::clearRequest(const CorrelationID& corrID)
 
 CTasksCreator& CTasksCreator::saveContext()
 {
-	depsStack.push(dependencies);
+	appStack.push(context);
 	return *this;
 }
 
 
-CTasksCreator& CTasksCreator::restoreContext()
+CTasksCreator& CTasksCreator::restoreContext(bool doPop)
 {
-	dependencies = depsStack.top();
-	depsStack.pop();
+	context = appStack.top();
+	if (doPop)
+		appStack.pop();
 	return *this;
 }

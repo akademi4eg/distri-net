@@ -35,7 +35,6 @@ int main(int argc, const char* argv[])
 	
 	std::string line;
 	std::map<std::string, SDataKey> vars;
-	std::string currQueue = c_sBatchExc;
 	CorrelationID currParentCall;
 	while (std::getline(infile, line))
 	{
@@ -78,23 +77,22 @@ int main(int argc, const char* argv[])
 		UniqueRequest request = RequestsFactory::getFromString(cmd, operands, params);
 		if (request->getType() == IRequest::Type::IF)
 		{
-			manager.sendDependentRequest(std::move(request), currQueue);
+			manager.sendDependentRequest(std::move(request));
 			currParentCall = manager.getLastParentCall();
-			currQueue = CCallbackRequest::formCallbackName(currParentCall, c_sTrue);
-			manager.saveContext();
+			manager.setCurrentQueue(CCallbackRequest::formCallbackName(currParentCall, c_sTrue))
+				   .saveContext();
 		}
 		else if (cmd == c_sElse)
 		{
-			manager.sendRequest(RequestsFactory::EndIf(currParentCall), currQueue);
-			manager.restoreContext();
-			currQueue = CCallbackRequest::formCallbackName(currParentCall, c_sFalse);
-			manager.saveContext();
+			manager.sendRequest(RequestsFactory::EndIf(currParentCall))
+			 	   .restoreContext(false)
+				   .setCurrentQueue(CCallbackRequest::formCallbackName(currParentCall, c_sFalse))
+				   .saveContext();
 		}
 		else if (cmd == c_sEndIf)
 		{
-			manager.sendRequest(RequestsFactory::EndIf(currParentCall), currQueue);
-			manager.restoreContext();
-			currQueue = c_sBatchExc;
+			manager.sendRequest(RequestsFactory::EndIf(currParentCall))
+				   .restoreContext();
 		}
 		else if (request->getType() == IRequest::Type::UNSUPPORTED)
 		{
@@ -103,7 +101,7 @@ int main(int argc, const char* argv[])
 		}
 		else
 		{
-			manager.sendDependentRequest(std::move(request), currQueue);
+			manager.sendDependentRequest(std::move(request));
 		}
 		if (infile.eof())
 			break;

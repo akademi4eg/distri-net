@@ -11,6 +11,12 @@ typedef std::map<std::string, CorrelationID> DepsMap;
 const std::string c_sBatchExc = "batches_ops";
 const std::string c_sTaskRoutKey = "task";
 
+struct SContext
+{
+	DepsMap dependencies;
+	std::string currQueue;
+};
+
 class CTasksCreator {
 	SimplePocoHandler *pConnectionHandler;
 	AMQP::Connection *pConnection;
@@ -22,9 +28,9 @@ class CTasksCreator {
 
 	std::string sResponsesQueue;
 
-	DepsMap dependencies;
+	SContext context;
 	std::list<CorrelationID> requestsSent;
-	std::stack<DepsMap> depsStack;
+	std::stack<SContext> appStack;
 public:
 	CTasksCreator(const std::string& host, uint16_t port,
 			const AMQP::Login& login, const std::string& vhost);
@@ -32,14 +38,13 @@ public:
 
 	void run();
 	CTasksCreator& sendDependentRequest(std::unique_ptr<IRequest> request,
-			const std::string& sendTo = c_sBatchExc,
 			const CorrelationID& corrID = getUniqueCorrelationID());
 	CTasksCreator& sendRequest(std::unique_ptr<IRequest> const & request,
-			const std::string& sendTo = c_sBatchExc,
 			const CorrelationID& corrID = getUniqueCorrelationID());
 	std::unique_ptr<IRequest> applyDependencies(std::unique_ptr<IRequest> request);
 	CTasksCreator& saveContext();
-	CTasksCreator& restoreContext();
+	CTasksCreator& restoreContext(bool doPop = true);
+	CTasksCreator& setCurrentQueue(const std::string& queue = c_sBatchExc) {context.currQueue = queue; return *this;};
 	const CorrelationID& getLastParentCall() const {return requestsSent.back();};
 
 	static std::string getUniqueCorrelationID();
