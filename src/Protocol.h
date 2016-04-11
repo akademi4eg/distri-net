@@ -12,6 +12,7 @@ static const char *c_UnaryOps[] = {"ZEROS", "SET", "INCREMENT", "DECREMENT", "FL
 static const char *c_BinaryOps[] = {"ADD", "SUB", "MUL", "DIV", "COPY"};
 const std::string c_sWorker = "worker:";
 const std::string c_sIf = "IF";
+const std::string c_sElse = "ELSE";
 const std::string c_sEndIf = "ENDIF";
 const std::string c_sCallback = "CALLBACK";
 const std::string c_sUnaryOp = "UNARY_OP";

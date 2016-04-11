@@ -1,3 +1,3 @@
 #pragma once
 
-const std::string c_sProductVersion("0.1.9");
+const std::string c_sProductVersion("0.1.10");

@@ -83,6 +83,13 @@ int main(int argc, const char* argv[])
 			currQueue = CCallbackRequest::formCallbackName(currParentCall, c_sTrue);
 			manager.saveContext();
 		}
+		else if (cmd == c_sElse)
+		{
+			manager.sendRequest(RequestsFactory::EndIf(currParentCall), currQueue);
+			manager.restoreContext();
+			currQueue = CCallbackRequest::formCallbackName(currParentCall, c_sFalse);
+			manager.saveContext();
+		}
 		else if (cmd == c_sEndIf)
 		{
 			manager.sendRequest(RequestsFactory::EndIf(currParentCall), currQueue);

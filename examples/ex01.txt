@@ -5,11 +5,13 @@ INCREMENT :a
 COPY :c, :a
 ADD :a, :b
 DIV :c, :a
-IFPOS :a, 1
+IFNEG :a, 1
 	DECREMENT :c
+ELSE
+	INCREMENT :c
 ENDIF
 
 // Expected output:
 // a = [-1, 4]
 // b = [-2, 3]
-// c = [-1, -0.75]
+// c = [0, 1.25]
